@@ -39,33 +39,21 @@ public class Applicant extends User {
     
     // Other original methods retained
     
-    /**
-     * Generates a receipt for the applicant's booking or application.
-     * If the applicant has a booked flat, it generates a receipt with the flat details.
-     * If the applicant only has an application (no booking yet), it generates a provisional receipt.
+      /**
+     * Generates a receipt for the applicant's booking.
+     * If the applicant has a booked flat, it returns the receipt with the booking details.
      * 
-     * @return The receipt as a formatted string, or null if neither booking nor application exists
+     * @return The receipt as a formatted string, or a message if no booking exists
      */
     public String generateReceipt() {
-        ReceiptGenerator generator = new ReceiptGenerator();
-        
-        // If the applicant has a booked flat, generate a receipt for it
         if (bookedFlat != null) {
+            ReceiptGenerator generator = new ReceiptGenerator();
             return generator.generateReceipt(bookedFlat);
+        } else if (appliedProject != null) {
+            return "No booking found. Your application status is: " + appliedProject.getStatus();
+        } else {
+            return "No active applications or bookings found.";
         }
-        
-        // If the applicant has an application but no booking yet, generate a provisional receipt
-        if (appliedProject != null) {
-            boolean success = generator.generateReceipt(appliedProject);
-            if (success) {
-                return "Provisional receipt generated for your application to " + 
-                       appliedProject.getProject().getProjectName() + ".\n" +
-                       "A complete receipt will be provided once your flat is booked.";
-            }
-        }
-        
-        // If the applicant has neither booking nor application
-        return "No active bookings or applications found.";
     }
     
     // Getters and Setters
