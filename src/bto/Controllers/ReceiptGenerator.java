@@ -6,59 +6,52 @@ import bto.Enums.*;
 import bto.EntitiesProjectRelated.*;
 import bto.Entities.*;
 
+/**
+ * Controller class for generating receipts for flat bookings.
+ * This class is responsible for formatting and generating receipts 
+ * that include applicant details, project information, and flat booking data.
+ */
 public class ReceiptGenerator {
-    // Constructor
+    /**
+     * Default constructor
+     */
     public ReceiptGenerator() {
     }
 
-    // Methods
+    /**
+     * Generates a receipt for a flat booking.
+     * The receipt includes applicant information, project details, and flat type.
+     * 
+     * @param booking The FlatBooking object containing all the necessary information
+     * @return A formatted receipt as a String
+     */
     public String generateReceipt(FlatBooking booking) {
         if (booking == null) {
             return null;
         }
 
-        return formatReceipt(booking);
-    }
-    
-    // Method that accepts a ProjectApplication
-    public boolean generateReceipt(ProjectApplication application) {
-        if (application == null || application.getApplicant() == null || 
-            application.getProject() == null || application.getSelectedFlatType() == null) {
-            return false;
-        }
-        
-        // Create a temporary booking object for receipt generation
-        FlatBooking tempBooking = new FlatBooking(
-            application.getApplicant(),
-            application.getProject(),
-            application.getSelectedFlatType(),
-            0  // We don't have a flat ID yet
-        );
-        
-        String receiptContent = formatReceipt(tempBooking);
-        return receiptContent != null && !receiptContent.isEmpty();
-    }
-    
-    // Enhanced format receipt method that uses FlatBooking
-    private String formatReceipt(FlatBooking booking) {
         User user = booking.getApplicant();
         Project project = booking.getProject();
         FlatType flatType = booking.getFlatType();
         int flatId = booking.getFlatId();
-        Date bookingDate = booking.getBookingDate();
         
         StringBuilder receipt = new StringBuilder();
 
         // Format current date
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
         String currentDate = dateFormat.format(new Date());
-        String bookingDateStr = dateFormat.format(bookingDate);
+        
+        // Generate receipt ID for reference
+        String receiptId = "REC-" + dateFormat.format(new Date()).replace("-", "") + "-" + 
+                           String.format("%04d", (int)(Math.random() * 10000));
 
+        // Header
         receipt.append("BOOKING RECEIPT\n");
         receipt.append("==============\n\n");
-        receipt.append("Receipt Date: ").append(currentDate).append("\n");
-        receipt.append("Booking Date: ").append(bookingDateStr).append("\n\n");
+        receipt.append("Receipt ID: ").append(receiptId).append("\n");
+        receipt.append("Date: ").append(currentDate).append("\n\n");
 
+        // Applicant Information
         receipt.append("Applicant Information:\n");
         receipt.append("---------------------\n");
         receipt.append("Name: ").append(user.getName()).append("\n");
@@ -66,6 +59,7 @@ public class ReceiptGenerator {
         receipt.append("Age: ").append(user.getAge()).append("\n");
         receipt.append("Marital Status: ").append(user.getMaritalStatus()).append("\n\n");
 
+        // Project Information
         receipt.append("Project Information:\n");
         receipt.append("-------------------\n");
         receipt.append("Project Name: ").append(project.getProjectName()).append("\n");
@@ -73,11 +67,11 @@ public class ReceiptGenerator {
         receipt.append("Flat Type: ").append(flatType).append("\n");
         
         if (flatId > 0) {
-            receipt.append("Flat ID: ").append(flatId).append("\n\n");
-        } else {
-            receipt.append("\n");
+            receipt.append("Flat ID: ").append(flatId).append("\n");
         }
+        receipt.append("\n");
 
+        // Confirmation and additional information
         receipt.append("This receipt confirms your booking of the above flat unit. ");
         receipt.append("Please retain this document for your records.\n\n");
         
@@ -85,39 +79,49 @@ public class ReceiptGenerator {
         receipt.append("--------------------\n");
         receipt.append("1. Further instructions regarding payment will be sent to you separately.\n");
         receipt.append("2. For enquiries, please contact HDB at 1800-123-4567.\n");
-        receipt.append("3. Please quote your NRIC and Flat ID in all communications.\n\n");
+        receipt.append("3. Please quote your NRIC and Receipt ID in all communications.\n\n");
+        
+        // Add processed by officer information if available
+        try {
+            HDBOfficer officer = booking.getProcessedByOfficer();
+            if (officer != null) {
+                receipt.append("Processed by Officer: ").append(officer.getName())
+                       .append(" (").append(officer.getNric()).append(")\n\n");
+            }
+        } catch (Exception e) {
+            // Officer information might not be available
+        }
         
         receipt.append("Thank you for choosing HDB.");
 
         return receipt.toString();
     }
     
-    // Original method maintained for backward compatibility
-    public String formatReceipt(User user, Project project, FlatType flatType) {
-        StringBuilder receipt = new StringBuilder();
-
-        // Format current date
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
-        String currentDate = dateFormat.format(new Date());
-
-        receipt.append("RECEIPT\n");
-        receipt.append("=======\n\n");
-        receipt.append("Date: ").append(currentDate).append("\n\n");
-
-        receipt.append("Applicant Information:\n");
-        receipt.append("---------------------\n");
-        receipt.append("NRIC: ").append(user.getNric()).append("\n");
-        receipt.append("Age: ").append(user.getAge()).append("\n");
-        receipt.append("Marital Status: ").append(user.getMaritalStatus()).append("\n\n");
-
-        receipt.append("Project Information:\n");
-        receipt.append("-------------------\n");
-        receipt.append("Project Name: ").append(project.getProjectName()).append("\n");
-        receipt.append("Neighborhood: ").append(project.getNeighborhood()).append("\n");
-        receipt.append("Flat Type: ").append(flatType).append("\n\n");
-
-        receipt.append("Thank you for your booking. Please keep this receipt for your records.");
-
-        return receipt.toString();
+    /**
+     * Generates a receipt for a ProjectApplication.
+     * This is used when an applicant has applied but not yet booked a flat.
+     * 
+     * @param application The ProjectApplication to generate a receipt for
+     * @return true if receipt generation was successful, false otherwise
+     */
+    public boolean generateReceipt(ProjectApplication application) {
+        if (application == null || application.getApplicant() == null || 
+            application.getProject() == null) {
+            return false;
+        }
+        
+        // If application has a selected flat type, use it; otherwise, this is just an application receipt
+        FlatType flatType = application.getSelectedFlatType();
+        
+        // Create a temporary booking object for receipt generation
+        FlatBooking tempBooking = new FlatBooking(
+            application.getApplicant(),
+            application.getProject(),
+            flatType, // This could be null for initial applications
+            0  // No flat ID yet
+        );
+        
+        String receiptContent = generateReceipt(tempBooking);
+        return receiptContent != null && !receiptContent.isEmpty();
     }
 }
