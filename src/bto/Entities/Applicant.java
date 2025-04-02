@@ -39,37 +39,26 @@ public class Applicant extends User {
     
     // Other original methods retained
     
-      /**
-     * Generates a receipt for the applicant's booking.
-     * If the applicant has a booked flat, it returns the receipt with the booking details.
-     * 
-     * @return The receipt as a formatted string, or a message if no booking exists
-     */
-    public String generateReceipt() {
-        if (bookedFlat != null) {
-            ReceiptGenerator generator = new ReceiptGenerator();
-            return generator.generateReceipt(bookedFlat);
-        } else if (appliedProject != null) {
-            return "No booking found. Your application status is: " + appliedProject.getStatus();
+   /**
+ * Generates a receipt for the applicant's booking.
+ * If the applicant has a booked flat, it returns the receipt with the booking details.
+ * 
+ * @return The receipt as a formatted string, or a message if no booking exists
+ */
+public String generateReceipt() {
+    if (bookedFlat != null) {
+        ReceiptGenerator generator = new ReceiptGenerator();
+        String receipt = generator.generateReceipt(bookedFlat);
+        
+        if (receipt != null && !receipt.isEmpty()) {
+            return receipt;
         } else {
-            return "No active applications or bookings found.";
+            return "Failed to generate receipt for your booking. Please contact a HDB Officer.";
         }
-    }
-    
-    // Getters and Setters
-    public ProjectApplication getAppliedProject() {
-        return appliedProject;
-    }
-   
-    public void setAppliedProject(ProjectApplication appliedProject) {
-        this.appliedProject = appliedProject;
-    }
-   
-    public FlatBooking getBookedFlat() {
-        return bookedFlat;
-    }
-   
-    public void setBookedFlat(FlatBooking bookedFlat) {
-        this.bookedFlat = bookedFlat;
+    } else if (appliedProject != null) {
+        return "No booking found. Your application status is: " + appliedProject.getStatus() + 
+               ". Please contact an HDB Officer to process your booking if your application is successful.";
+    } else {
+        return "No active applications or bookings found.";
     }
 }
