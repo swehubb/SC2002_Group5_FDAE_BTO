@@ -1,66 +1,47 @@
-
-/**
- * Generates a receipt for a project application.
- * Officers cannot generate receipts for their own applications.
- * 
- * @param application The project application to generate a receipt for
- * @return The receipt as a formatted string, or null if the application is invalid or belongs to the officer
- */
-public String generateReceipt(ProjectApplication application) {
-    // Check if the application belongs to the officer
-    if (application == null || application.getApplicant().getNric().equals(this.getNric())) {
-        // Not allowed to generate receipt for their own application
-        return null;
-    }
-    
-    // Use the ReceiptGenerator to generate the receipt
-    ReceiptGenerator generator = new ReceiptGenerator();
-    boolean success = generator.generateReceipt(application);
-    
-    if (success) {
-        // Create a temporary booking object for receipt generation
-        FlatBooking tempBooking = new FlatBooking(
-            application.getApplicant(),
-            application.getProject(),
-            application.getSelectedFlatType(),
-            0  // No flat ID yet
-        );
-        
-        // Set the officer as the processor
-        try {
-            tempBooking.setProcessedByOfficer(this);
-        } catch (Exception e) {
-            // ProcessedByOfficer might not be available in the FlatBooking class
-        }
-        
-        return generator.generateReceipt(tempBooking);
-    } else {
-        return null;
-    }
-}
-
 /**
  * Generates a receipt for a flat booking.
- * Officers cannot generate receipts for their own bookings.
  * 
  * @param booking The flat booking to generate a receipt for
- * @return The receipt as a formatted string, or null if the booking is invalid or belongs to the officer
+ * @return The receipt as a formatted string
  */
-public String generateReceiptForBooking(FlatBooking booking) {
-    // Check if the booking belongs to the officer
-    if (booking == null || booking.getApplicant().getNric().equals(this.getNric())) {
-        // Not allowed to generate receipt for their own booking
+public String generateReceipt(FlatBooking booking) {
+    if (booking == null) {
         return null;
     }
     
-    // Set the officer as the processor
-    try {
-        booking.setProcessedByOfficer(this);
-    } catch (Exception e) {
-        // ProcessedByOfficer might not be available in the FlatBooking class
+    StringBuilder receipt = new StringBuilder();
+    receipt.append("======== BOOKING RECEIPT ========\n");
+    receipt.append("Date: ").append(booking.getBookingDate()).append("\n\n");
+    
+    // Applicant Details
+    User applicant = booking.getApplicant();
+    receipt.append("APPLICANT DETAILS:\n");
+    receipt.append("Name: ").append(applicant.getName()).append("\n");
+    receipt.append("NRIC: ").append(applicant.getNric()).append("\n");
+    receipt.append("Age: ").append(applicant.getAge()).append("\n");
+    receipt.append("Marital Status: ").append(applicant.getMaritalStatus()).append("\n\n");
+    
+    // Project Details
+    Project project = booking.getProject();
+    receipt.append("PROJECT DETAILS:\n");
+    receipt.append("Project Name: ").append(project.getProjectName()).append("\n");
+    receipt.append("Location: ").append(project.getNeighborhood()).append("\n\n");
+    
+    // Flat Details
+    receipt.append("FLAT DETAILS:\n");
+    receipt.append("Flat Type: ").append(booking.getFlatType()).append("\n");
+    receipt.append("Flat ID: ").append(booking.getFlatId()).append("\n\n");
+    
+    // Processing Officer Details
+    HDBOfficer officer = booking.getProcessedByOfficer();
+    if (officer != null) {
+        receipt.append("PROCESSED BY:\n");
+        receipt.append("Officer Name: ").append(officer.getName()).append("\n");
+        receipt.append("Officer ID: ").append(officer.getNric()).append("\n\n");
     }
     
-    // Use the ReceiptGenerator to generate the receipt
-    ReceiptGenerator generator = new ReceiptGenerator();
-    return generator.generateReceipt(booking);
+    receipt.append("Thank you for choosing HDB for your housing needs.\n");
+    receipt.append("================================");
+    
+    return receipt.toString();
 }
