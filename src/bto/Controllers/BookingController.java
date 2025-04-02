@@ -174,26 +174,20 @@ public class BookingController {
         return false;
     }
 
-    // Original method
-    public String generateReceipt(FlatBooking booking) {
-        return receiptGenerator.generateReceipt(booking);
-    }
-    
-    // Method to generate receipt directly from booking controller
-    public boolean generateReceipt(ProjectApplication application) {
+        // Method to generate receipt directly from booking controller
+    public String generateReceipt(ProjectApplication application) {
         if (application == null || application.getApplicant() == null) {
-            return false;
+            return "Invalid application";
         }
         
         String nric = application.getApplicant().getNric();
         FlatBooking booking = bookings.get(nric);
         
         if (booking == null) {
-            return false;
+            return "No booking found for this application";
         }
         
         // Generate receipt
         String receipt = receiptGenerator.generateReceipt(booking);
-        return receipt != null && !receipt.isEmpty();
+        return receipt != null ? receipt : "Failed to generate receipt";
     }
-}
