@@ -103,14 +103,13 @@ public class OfficerInterface {
             case 3:
                 viewProjectAssignments(currentOfficer);
                 break;
-            case 4:
+	    case 4:
                 manageApplicationsAndBookings(currentOfficer);
                 break;
-            case 5:
-                // Generate Receipt for Booking - implementation needed
-                System.out.println("Function not implemented yet.");
-                displayOfficerMenu(officer);
-                break;
+            // In case 5 (Generate Receipt for Booking), replace the "Function not implemented yet" with:
+	    case 5:
+	    	generateReceiptForBooking();
+	    	break;
             case 6:
                 // View Pending Enquiries - implementation needed
                 System.out.println("Function not implemented yet.");
@@ -1338,3 +1337,148 @@ public class OfficerInterface {
         
     }
 	}
+
+// Add this new method
+private void generateReceiptForBooking() {
+    System.out.println("\n=== GENERATE RECEIPT FOR BOOKING ===");
+    
+    // First check if officer has any assigned projects
+    if (currentOfficer.getAssignedProjects().isEmpty()) {
+        System.out.println("You are not assigned to any projects yet.");
+        System.out.println("Please register for and get approved for a project first.");
+        
+        // Wait for user input before returning to menu
+        System.out.println("\nPress Enter to return to the main menu...");
+        scanner.nextLine();
+        displayOfficerMenu(currentOfficer);
+        return;
+    }
+    
+    // Get list of projects the officer is handling
+    List<Project> assignedProjects = currentOfficer.getAssignedProjects();
+    System.out.println("Select a project:");
+    
+    for (int i = 0; i < assignedProjects.size(); i++) {
+        System.out.println((i+1) + ". " + assignedProjects.get(i).getProjectName());
+    }
+    
+    System.out.println("0. Back to Main Menu");
+    System.out.print("\nEnter your choice: ");
+    
+    try {
+        int projectChoice = Integer.parseInt(scanner.nextLine());
+        
+        if (projectChoice == 0) {
+            displayOfficerMenu(currentOfficer);
+            return;
+        }
+        
+        if (projectChoice < 1 || projectChoice > assignedProjects.size()) {
+            System.out.println("Invalid project selection.");
+            generateReceiptForBooking();
+            return;
+        }
+        
+        // Get the selected project
+        Project selectedProject = assignedProjects.get(projectChoice-1);
+        
+        // Get applications for the selected project that are in BOOKED status
+        List<ProjectApplication> applications = new ArrayList<>();
+        List<ProjectApplication> allApps = applicationController.getApplicationsByProject(selectedProject);
+        
+        for (ProjectApplication app : allApps) {
+            if (app.getStatus() == ApplicationStatus.BOOKED) {
+                applications.add(app);
+            }
+        }
+        
+        if (applications.isEmpty()) {
+            System.out.println("No booked applications found for this project.");
+            System.out.println("\nPress Enter to continue...");
+            scanner.nextLine();
+            generateReceiptForBooking();
+            return;
+        }
+        
+        System.out.println("\nSelect an applicant to generate receipt for:");
+        for (int i = 0; i < applications.size(); i++) {
+            Applicant applicant = applications.get(i).getApplicant();
+            System.out.println((i+1) + ". " + applicant.getName() + " (" + applicant.getNric() + ")");
+        }
+        
+        System.out.println("0. Back");
+        System.out.print("\nEnter your choice: ");
+        
+        int applicantChoice = Integer.parseInt(scanner.nextLine());
+        
+        if (applicantChoice == 0) {
+            generateReceiptForBooking();
+            return;
+        }
+        
+        if (applicantChoice < 1 || applicantChoice > applications.size()) {
+            System.out.println("Invalid applicant selection.");
+            generateReceiptForBooking();
+            return;
+        }
+        
+        // Get the selected application
+        ProjectApplication selectedApp = applications.get(applicantChoice-1);
+        
+        // Generate receipt using the officer's method
+        String receipt = currentOfficer.generateReceipt(selectedApp);
+        
+        if (receipt != null && !receipt.isEmpty()) {
+            System.out.println("\n======== BOOKING RECEIPT ========");
+            System.out.println(receipt);
+            System.out.println("\nReceipt generated successfully!");
+        } else {
+            System.out.println("\nFailed to generate receipt. This could be because:");
+            System.out.println("- You cannot generate a receipt for your own application");
+            System.out.println("- The application status is not BOOKED");
+            System.out.println("- There was an error in the receipt generation process");
+        }
+        
+        // Offer save option
+        System.out.println("\nNote: To save this receipt, you can copy and paste the text above.");
+        
+    } catch (NumberFormatException e) {
+        System.out.println("Invalid input. Please enter a number.");
+    }
+    
+    // Wait for user input before returning to menu
+    System.out.println("\nPress Enter to return to the main menu...");
+    scanner.nextLine();
+    
+    // Return to the officer menu
+    displayOfficerMenu(currentOfficer);
+}
+
+// Update the viewBookingDetails method to use the officer's generateReceiptForBooking method
+private void viewBookingDetails(FlatBooking booking) {
+    System.out.println("\n======== BOOKING DETAILS ========");
+    // Display booking details (keep your existing code)
+    
+    // Print receipt option
+    System.out.println("\nOptions:");
+    System.out.println("1. Print Receipt");
+    System.out.println("0. Back");
+    
+    System.out.print("\nEnter your choice: ");
+    int choice = Integer.parseInt(scanner.nextLine());
+    
+    if (choice == 1) {
+        // Use the officer's method to generate the receipt
+        String receipt = currentOfficer.generateReceiptForBooking(booking);
+        if (receipt != null && !receipt.isEmpty()) {
+            System.out.println("\n======== BOOKING RECEIPT ========");
+            System.out.println(receipt);
+        } else {
+            System.out.println("Failed to generate receipt. Please check if this is your own booking.");
+        }
+    }
+    
+    // Wait for user input before returning
+    System.out.println("\nPress Enter to continue...");
+    scanner.nextLine();
+}
