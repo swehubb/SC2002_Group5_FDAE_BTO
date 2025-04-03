@@ -109,6 +109,7 @@ public class ApplicantInterface {
                         break;
                     case 7:
                         // Request Withdrawal
+                        withdrawalRequest();
                         break;
                     case 8:
                         changePasswordInterface();
@@ -550,5 +551,66 @@ public class ApplicantInterface {
         
         // Return to the applicant menu
         displayApplicantMenu(applicant);
+    }
+
+    private void withdrawalRequest() {
+        System.out.println("\n=== WITHDRAWAL REQUEST ===");
+        
+        // Get the current applicant's application
+        ProjectApplication application = applicationController.getApplicationByApplicantNRIC(currentApplicant.getNric());
+        
+        // Check if the applicant has an application
+        if (!currentApplicant.requestWithdrawal() || application == null) {
+            System.out.println("You currently have no active applications to withdraw.");
+            System.out.println("\nPress Enter to return to the main menu...");
+            scanner.nextLine();
+            return;
+        }
+        
+        // Check if there's already a withdrawal request
+        if (application.getWithdrawalStatus() != null) {
+            System.out.println("You already have a withdrawal request with status: " + application.getWithdrawalStatus());
+            System.out.println("\nPress Enter to return to the main menu...");
+            scanner.nextLine();
+            return;
+        }
+        
+        // Display application details
+        Project project = application.getProject();
+        System.out.println("You are about to request withdrawal for:");
+        System.out.println("Project: " + project.getProjectName());
+        System.out.println("Status: " + application.getStatus().toString());
+        
+        // Ask for confirmation
+        System.out.println("\nWarning: Withdrawal requests are subject to approval and may incur penalties.");
+        System.out.println("Do you want to proceed?");
+        System.out.println("1. Yes, submit withdrawal request");
+        System.out.println("0. No, cancel and return to menu");
+        
+        System.out.print("\nEnter your choice: ");
+        try {
+            int choice = Integer.parseInt(scanner.nextLine());
+            
+            if (choice == 1) {
+                // Submit withdrawal request through controller
+                Withdrawal withdrawal = withdrawalController.submitWithdrawal(currentApplicant, application);
+                
+                if (withdrawal != null) {
+                    System.out.println("\nWithdrawal request submitted successfully.");
+                    System.out.println("Your request is now pending approval from an HDB Manager.");
+                    System.out.println("You will be notified once your request has been processed.");
+                } else {
+                    System.out.println("\nFailed to submit withdrawal request. Please try again later.");
+                }
+            } else if (choice != 0) {
+                System.out.println("Invalid choice.");
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid input. Please enter a number.");
+        }
+        
+        // Wait for user input before returning to menu
+        System.out.println("\nPress Enter to return to the main menu...");
+        scanner.nextLine();
     }
 }

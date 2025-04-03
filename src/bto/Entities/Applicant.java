@@ -126,6 +126,9 @@ public class Applicant extends User {
 	 
 	 public boolean requestWithdrawal() {
 	     // Implementation for withdrawal request
+		 if (appliedProject != null){
+			return true;
+		 }
 	     return false; // Placeholder
 	 }
 	 
