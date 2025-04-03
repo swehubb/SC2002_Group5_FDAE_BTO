@@ -280,16 +280,26 @@ public class HDBManager extends User {
     }
     
     public Report generateReport(FilterCriteria criteria) {
-        Report report = new Report("BTO Flat Booking Report", criteria);
-        
+        Report report = new Report("BTO Flat Booking Report", criteria);        
         // Collect all bookings from managed projects
         for (Project project : this.managedProjects) {
-            if (project.getBookings() != null) {
-                for (FlatBooking booking : project.getBookings()) {
+            // Get applications with BOOKED status
+            for (ProjectApplication application : project.getApplications()) {
+                if (application.getStatus() == bto.Enums.ApplicationStatus.BOOKED) {
+                    // Create a booking from the application data
+                    FlatBooking booking = new FlatBooking(
+                        application.getApplicant(),
+                        project,
+                        application.getSelectedFlatType(),
+                        0  // Default value for flat ID
+                    );
                     report.addBooking(booking);
                 }
             }
         }
+        
+        return report;
+    }
         
         // Generate the formatted report
         report.getFormattedReport();

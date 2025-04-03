@@ -74,69 +74,46 @@ public class Report {
 }
 
 private void generateReportContent(List<FlatBooking> filteredBookings) {
-    StringBuilder sb = new StringBuilder();
-    
-    // Report header
-    sb.append("============= BTO FLAT BOOKING REPORT =============\n");
-    sb.append("Report Type: ").append(reportType).append("\n");
-    sb.append("Date: ").append(new Date()).append("\n");
-    sb.append("Filters Applied: ");
-    
-    if (filters != null && !filters.getCriteria().isEmpty()) {
-        Map<String, Object> appliedCriteria = filters.getCriteria();
-        boolean isFirstFilter = true;
-        
-        if (appliedCriteria.containsKey("maritalStatus")) {
-            sb.append("Marital Status: ").append(appliedCriteria.get("maritalStatus"));
-            isFirstFilter = false;
-        }
-        
-        if (appliedCriteria.containsKey("flatType")) {
-            if (!isFirstFilter) sb.append(", ");
-            sb.append("Flat Type: ").append(appliedCriteria.get("flatType"));
-            isFirstFilter = false;
-        }
-        
-        if (appliedCriteria.containsKey("projectName")) {
-            if (!isFirstFilter) sb.append(", ");
-            sb.append("Project: ").append(appliedCriteria.get("projectName"));
-        }
-    } else {
-        sb.append("None (All Bookings)");
-    }
-    
-    sb.append("\n\n");
-    
-    // Table header
-    String header = String.format("%-20s | %-12s | %-15s | %-10s | %-15s | %-10s", 
-            "Applicant Name", "NRIC", "Project Name", "Flat Type", "Booking Date", "Marital Status");
-    String separator = "=".repeat(header.length());
-    
-    sb.append(separator).append("\n");
-    sb.append(header).append("\n");
-    sb.append(separator).append("\n");
-    
-    if (filteredBookings.isEmpty()) {
-        sb.append("No bookings match the specified criteria.\n");
-    } else {
-        // Table rows
-        for (FlatBooking booking : filteredBookings) {
-            Applicant applicant = booking.getApplicant();
-            String row = String.format("%-20s | %-12s | %-15s | %-10s | %-15s | %-10s",
-                    applicant.getName(),
-                    applicant.getNric(),
-                    booking.getProject().getProjectName(),
-                    booking.getFlatType(),
-                    booking.getBookingDate().toString(),
-                    applicant.getMaritalStatus());
-            sb.append(row).append("\n");
-        }
-    }
-    
-    sb.append(separator).append("\n");
-    sb.append("Total bookings: ").append(filteredBookings.size()).append("\n");
-    
-    this.content = sb.toString();
+   StringBuilder sb = new StringBuilder();
+   
+   // Report header
+   sb.append("============= BTO FLAT BOOKING REPORT =============\n");
+   sb.append("Report Type: ").append(reportType).append("\n");
+   sb.append("Date: ").append(new Date()).append("\n");
+   sb.append("Filters Applied: ");
+   
+   // Add filter information...
+   
+   sb.append("\n\n");
+   
+   // Table header - simplified to only show requested fields
+   String header = String.format("%-10s | %-15s | %-4s | %-15s", 
+           "Flat Type", "Project Name", "Age", "Marital Status");
+   String separator = "=".repeat(header.length());
+   
+   sb.append(separator).append("\n");
+   sb.append(header).append("\n");
+   sb.append(separator).append("\n");
+   
+   if (filteredBookings.isEmpty()) {
+       sb.append("No bookings match the specified criteria.\n");
+   } else {
+       // Table rows - only include requested fields
+       for (FlatBooking booking : filteredBookings) {
+           Applicant applicant = booking.getApplicant();
+           String row = String.format("%-10s | %-15s | %-4d | %-15s",
+                   booking.getFlatType(),
+                   booking.getProject().getProjectName(),
+                   applicant.getAge(),
+                   applicant.getMaritalStatus());
+           sb.append(row).append("\n");
+       }
+   }
+   
+   sb.append(separator).append("\n");
+   sb.append("Total bookings: ").append(filteredBookings.size()).append("\n");
+   
+   this.content = sb.toString();
 }
 
    public boolean applyFilters(FilterCriteria newFilters) {

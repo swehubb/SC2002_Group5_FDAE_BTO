@@ -820,10 +820,10 @@ public class ManagerInterface {
                 // All applicants, no specific filter
                 break;
             case 2:
-                criteria.addCriteria("maritalStatus", MaritalStatus.MARRIED);
+                criteria.addCriterion("maritalStatus", MaritalStatus.MARRIED);
                 break;
             case 3:
-                criteria.addCriteria("maritalStatus", MaritalStatus.SINGLE);
+                criteria.addCriterion("maritalStatus", MaritalStatus.SINGLE);
                 break;
             case 4:
                 System.out.println("Select Flat Type:");
@@ -832,9 +832,9 @@ public class ManagerInterface {
                 int flatTypeChoice = Integer.parseInt(getInput("Enter your choice: "));
                 
                 if (flatTypeChoice == 1) {
-                    criteria.addCriteria("flatType", FlatType.TWO_ROOM);
+                    criteria.addCriterion("flatType", FlatType.TWO_ROOM);
                 } else if (flatTypeChoice == 2) {
-                    criteria.addCriteria("flatType", FlatType.THREE_ROOM);
+                    criteria.addCriterion("flatType", FlatType.THREE_ROOM);
                 } else {
                     showMessage("Invalid choice. Generating report for all flat types.");
                 }
@@ -857,8 +857,7 @@ public class ManagerInterface {
                     int projectChoice = Integer.parseInt(getInput("Select a project (0 for all): "));
                     
                     if (projectChoice > 0 && projectChoice <= managerProjects.size()) {
-                        criteria.addCriteria("project", managerProjects.get(projectChoice - 1));
-                    } else {
+                        criteria.addCriterion("project", managerProjects.get(projectChoice - 1));                    } else {
                         showMessage("Generating report for all projects.");
                     }
                 }
@@ -867,8 +866,8 @@ public class ManagerInterface {
                 int minAge = Integer.parseInt(getInput("Enter minimum age: "));
                 int maxAge = Integer.parseInt(getInput("Enter maximum age: "));
                 
-                criteria.addCriteria("minAge", minAge);
-                criteria.addCriteria("maxAge", maxAge);
+                criteria.addCriterion("minAge", minAge);
+                criteria.addCriterion("maxAge", maxAge);
                 break;
             default:
                 showMessage("Invalid choice. Generating report for all applicants.");
