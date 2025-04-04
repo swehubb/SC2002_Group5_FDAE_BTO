@@ -1,4 +1,4 @@
-package bto.EntitiesProjectRelated;
+package bto.Controllers;
 
 import java.util.Date;
 import bto.Entities.Applicant;
