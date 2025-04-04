@@ -547,7 +547,7 @@ private void viewBookingReceipt(Applicant applicant) {
     System.out.println("\n======== BOOKING RECEIPT ========");
     
     // Use the Applicant's generateReceipt method directly
-    String receipt = applicant.generateReceipt();
+    String receipt = applicant.generateReceipt(bookingController);
     System.out.println(receipt);
     
     System.out.println("\nNote: To save this receipt, you can copy and paste the text above.");
@@ -558,4 +558,5 @@ private void viewBookingReceipt(Applicant applicant) {
     
     // Return to the applicant menu
     displayApplicantMenu(applicant);
+}
 }
