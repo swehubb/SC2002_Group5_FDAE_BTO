@@ -1,5 +1,5 @@
 package bto.Entities;
-
+import bto.Controllers.BookingController;
 import bto.EntitiesProjectRelated.*;
 import bto.Enums.*;
 import java.util.Date;
@@ -162,20 +162,26 @@ public class Applicant extends User {
 	 }
 
    
-    // In Applicant.java - without storing a Receipt reference
-	public String generateReceipt(BookingController bookingController) {
-	    if (bookedFlat != null) {
-	        // Check if a receipt exists in the BookingController
-	        if (bookingController.hasReceipt(this.getNric())) {
-	            Receipt storedReceipt = bookingController.getReceiptForApplicant(this.getNric());
-	            return storedReceipt.getContent();
-	        } else {
-	            return "No receipt has been generated for your booking yet.\nPlease contact an HDB Officer to generate a receipt.";
-	        }
-	    } else if (appliedProject != null) {
-	        return "No booking found. Your application status is: " + appliedProject.getStatus() + 
-	               ". Please contact an HDB Officer to process your booking if your application is successful.";
-	    } else {
-	        return "No active applications or bookings found.";
-	    }
-	}
+	 /**
+	  * Generates a receipt for this applicant's booking.
+	  * 
+	  * @param bookingController The BookingController to use for receipt generation
+	  * @return The receipt as a formatted string, or a message if no booking exists
+	  */
+	 public String generateReceipt(BookingController bookingController) {
+	     if (bookedFlat != null) {
+	         // Check if a receipt exists in the BookingController
+	         if (bookingController.hasReceipt(this.getNric())) {
+	             bto.Controllers.Receipt storedReceipt = bookingController.getReceiptForApplicant(this.getNric());
+	             return storedReceipt.getContent();
+	         } else {
+	             return "No receipt has been generated for your booking yet.\nPlease contact an HDB Officer to generate a receipt.";
+	         }
+	     } else if (appliedProject != null) {
+	         return "No booking found. Your application status is: " + appliedProject.getStatus() + 
+	                ". Please contact an HDB Officer to process your booking if your application is successful.";
+	     } else {
+	         return "No active applications or bookings found.";
+	     }
+	 }
+}
