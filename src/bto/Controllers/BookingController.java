@@ -19,6 +19,7 @@ public class BookingController {
         bookings = new HashMap<>();
         rejectedBookings = new HashMap<>();
         receiptGenerator = new ReceiptGenerator();
+        receipts = new HashMap<>();
     }
 
     // Original method
