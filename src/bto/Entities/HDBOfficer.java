@@ -72,5 +72,6 @@ public String generateReceipt(ProjectApplication application) {
         return "Cannot generate receipt. Application status: " + application.getStatus();
     }
 }
+}
 
 
