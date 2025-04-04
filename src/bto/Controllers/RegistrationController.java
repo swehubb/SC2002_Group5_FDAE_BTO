@@ -23,26 +23,27 @@ public class RegistrationController {
      * @return The created OfficerRegistration object, or null if no slots available
      */
     public OfficerRegistration registerOfficer(HDBOfficer officer, Project project) {
+
         // Check if the project has available slots
         if (project.getAvailableHDBOfficerSlots() <= 0) {
             return null; // No available slots
         }
-        
+
         // Create a new registration
         OfficerRegistration registration = new OfficerRegistration(officer, project);
-        
+
         // Add to the officer's registrations
         officer.addRegistration(registration);
-        
+
         // Add to the project's registrations
         project.addOfficerRegistration(registration);
-        
+
         // Store in the database
         if (!registrations.containsKey(officer.getNric())) {
             registrations.put(officer.getNric(), new ArrayList<>());
         }
         registrations.get(officer.getNric()).add(registration);
-        
+
         return registration;
     }
     
@@ -104,8 +105,13 @@ public class RegistrationController {
     public List<OfficerRegistration> getAllRegistrations() {
         List<OfficerRegistration> allRegistrations = new ArrayList<>();
         
-        for (List<OfficerRegistration> officerRegs : registrations.values()) {
-            allRegistrations.addAll(officerRegs);
+        
+        for (Map.Entry<String, List<OfficerRegistration>> entry : registrations.entrySet()) {
+            
+            for (OfficerRegistration reg : entry.getValue()) {
+            }
+            
+            allRegistrations.addAll(entry.getValue());
         }
         
         return allRegistrations;
@@ -127,4 +133,32 @@ public class RegistrationController {
         
         return false;
     }
+    public void setRegistrations(List<OfficerRegistration> registrationList) {
+        // Clear existing registrations
+        this.registrations.clear();
+        
+        // Debug: Print incoming registrations
+        System.out.println("Setting registrations. Total count: " + registrationList.size());
+        
+        for (OfficerRegistration registration : registrationList) {
+            String officerNric = registration.getHdbOfficer().getNric();
+            
+            // Ensure the list exists for this officer
+            if (!this.registrations.containsKey(officerNric)) {
+                this.registrations.put(officerNric, new ArrayList<>());
+            }
+            
+            // Add the registration to the list
+            this.registrations.get(officerNric).add(registration);
+            
+            // Debug: Print each registration as it's added
+            System.out.println("Added registration for Officer: " + registration.getHdbOfficer().getName() 
+                               + ", Project: " + registration.getProject().getProjectName() 
+                               + ", Status: " + registration.getRegistrationStatus());
+        }
+        
+        // Verify registrations after setting
+        System.out.println("Registrations map size after setting: " + this.registrations.size());
+    }
+    
 }

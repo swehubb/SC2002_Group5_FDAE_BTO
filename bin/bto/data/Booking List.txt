@@ -1,0 +1,1 @@
+Applicant NRIC	Project Name	Flat Type	Flat ID	Booking Date	Booking Status	Rejection Reason

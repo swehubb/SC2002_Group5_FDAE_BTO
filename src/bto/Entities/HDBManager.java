@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Date;
 import java.util.Map;
 
+
+
 public class HDBManager extends User {
     private List<Project> managedProjects;
     
@@ -61,46 +63,36 @@ public class HDBManager extends User {
             return false;
         }
         
-        // Check if project is in application period
-        Date currentDate = new Date();
-        if (currentDate.after(project.getApplicationOpenDate()) && 
-            currentDate.before(project.getApplicationCloseDate())) {
-            return false; // Cannot edit during application period
-        }
-        
         // Update specific attribute based on input
         switch (attribute.toLowerCase()) {
+            case "availablehdbofficerunits":
+                int slots = ((Integer) newValue).intValue();
+                project.setTotalOfficerSlots(slots);
+                return true;
+            
+            case "flattypeunits":
+                Map<FlatType, Integer> flatTypeUnits = (Map<FlatType, Integer>) newValue;
+                project.setFlatTypeUnits(flatTypeUnits);
+                return true;
+            
             case "projectname":
                 project.setProjectName((String) newValue);
                 return true;
+            
             case "neighborhood":
                 project.setNeighborhood((String) newValue);
                 return true;
+            
             case "applicationopendate":
                 project.setApplicationOpenDate((Date) newValue);
                 return true;
+            
             case "applicationclosedate":
                 project.setApplicationCloseDate((Date) newValue);
                 return true;
-            case "visible":
-                project.setVisible((Boolean) newValue);
-                return true;
-            case "flattypeunits":
-                if (newValue instanceof Map) {
-                    @SuppressWarnings("unchecked")
-                    Map<FlatType, Integer> flatTypeUnits = (Map<FlatType, Integer>) newValue;
-                    project.setFlatTypeUnits(flatTypeUnits);
-                    return true;
-                }
-                return false;
-            case "availablehdbofficerunits":
-                if (newValue instanceof Integer) {
-                    project.setAvailableHDBOfficerSlots((Integer) newValue);
-                    return true;
-                }
-                return false;
+            
             default:
-                return false; // Unknown attribute
+                return false;
         }
     }
     

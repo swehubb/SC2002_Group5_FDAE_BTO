@@ -27,7 +27,10 @@ public class UserInterface {
 
     // Constructor
     public UserInterface(AuthController authController, ProjectController projectController, 
-            ApplicationController applicationController, EnquiryController enquiryController) {
+            ApplicationController applicationController, EnquiryController enquiryController, 
+            RegistrationController registrationController,
+            WithdrawalController withdrawalController, BookingController bookingController,
+            ReceiptGenerator receiptGenerator, ReportController reportController) {
         scanner = new Scanner(System.in);
         
         // Use the provided controllers
@@ -37,11 +40,11 @@ public class UserInterface {
         this.enquiryController = enquiryController;
         
         // Initialize other controllers that aren't passed in
-        this.reportController = new ReportController();
-        this.registrationController = new RegistrationController();
-        this.withdrawalController = new WithdrawalController();
-        this.bookingController = new BookingController();
-        this.receiptGenerator = new ReceiptGenerator();
+        this.reportController = reportController;
+        this.registrationController = registrationController;
+        this.withdrawalController = withdrawalController;
+        this.bookingController = bookingController;
+        this.receiptGenerator = receiptGenerator;
         
         // Pass controllers to boundary classes (interfaces)
         applicantInterface = new ApplicantInterface(scanner, this.authController, this.projectController, 
@@ -72,7 +75,12 @@ public class UserInterface {
             System.out.print("Enter NRIC: ");
             newnric = scanner.nextLine();
             if (authController.validateNRIC(newnric)) {
-                break;  // If valid, break out of the loop
+            	if (!authController.getUsers().containsKey(newnric)) {
+            		break;  // If valid, break out of the loop
+            	}
+            	else {
+            		System.out.println("NRIC is already registered on another User");
+            	}
             } else {
                 System.out.println("Invalid NRIC format. Please try again.");
             }
@@ -150,7 +158,7 @@ public class UserInterface {
     
    
     public void displayLoginMenu() {
-
+    	while (true) {
                 System.out.println("=== BTO MANAGEMENT SYSTEM ===");
                 System.out.println("1. Login");
                 System.out.println("2. Sign Up");
@@ -161,136 +169,142 @@ public class UserInterface {
                 
                 if (input.isEmpty()) {
                     System.out.println("Please enter a valid option.");
-                    displayLoginMenu();
+                    continue;
                 }
-                
-                int choice = Integer.parseInt(input);
-                
-                switch (choice) {
-                    case 1:
-                        System.out.print("Enter NRIC: ");
-                        String nric = scanner.nextLine();
-                        System.out.print("Enter Password: ");
-                        String password = scanner.nextLine();
-                        
-                        User user = authController.loginUser(nric, password);
-                        if (user != null) {
-                            displayUserMenu(user);
-                        } else {
-                            System.out.println("Invalid credentials. Please try again.");
-                            // Continue in the login menu
-                        }
-                        break;
-                    case 2:
-                        while (true) {
-                            try {
-                                System.out.println("Pick a Role:");
-                                System.out.println("1) Applicant");
-                                System.out.println("2) HDB Officer");
-                                System.out.println("3) HDB Manager");
-                                System.out.println("4) Go Back");
-                                System.out.print("Enter your choice: ");
-                                
-                                String roleInput = scanner.nextLine().trim();
-                                
-                                if (roleInput.isEmpty()) {
-                                    System.out.println("Please enter a valid option.");
-                                    continue;
-                                }
-                                
-                                int rolechoice = Integer.parseInt(roleInput);
-
-                                switch(rolechoice) {
-                                    case 1:
-                                        User applicantData = signUp();
-                                        Applicant applicant = new Applicant(
-                                            applicantData.getNric(),
-                                            applicantData.getPassword(),
-                                            applicantData.getAge(),
-                                            applicantData.getMaritalStatus(),
-                                            applicantData.getName()
-                                        );
-                                        System.out.println("Applicant registered successfully!");
-                                        if (authController.addUser(applicant)) {
-                                            User newuser = authController.loginUser(applicantData.getNric(), applicantData.getPassword());
-                                            if (newuser != null) {
-                                                displayUserMenu(newuser);
-                                            } else {
-                                                System.out.println("Invalid credentials. Please try again.");
-                                                // Continue in the login menu
-                                            }
-                                        }
-                                        break;
-                                        
-                                    case 2:
-                                        User officerData = signUp();
-                                        HDBOfficer officer = new HDBOfficer(
-                                            officerData.getNric(),
-                                            officerData.getPassword(),
-                                            officerData.getAge(),
-                                            officerData.getMaritalStatus(),
-                                            officerData.getName()
-                                        );
-                                        System.out.println("HDB Officer registered successfully!");
-                                        if (authController.addUser(officer)) {
-                                            User newuser = authController.loginUser(officerData.getNric(), officerData.getPassword());
-                                            if (newuser != null) {
-                                                displayUserMenu(newuser);
-                                            } else {
-                                                System.out.println("Invalid credentials. Please try again.");
-                                                // Continue in the login menu
-                                            }
-                                        }
-                                        break;
-
-                                    case 3:
-                                        User managerData = signUp();
-                                        HDBManager manager = new HDBManager(
-                                            managerData.getNric(),
-                                            managerData.getPassword(),
-                                            managerData.getAge(),
-                                            managerData.getMaritalStatus(),
-                                            managerData.getName()
-                                        );
-                                        System.out.println("HDB Manager registered successfully!");
-                                        if (authController.addUser(manager)) {
-                                            User newuser = authController.loginUser(managerData.getNric(), managerData.getPassword());
-                                            if (newuser != null) {
-                                                displayUserMenu(newuser);
-                                            } else {
-                                                System.out.println("Invalid credentials. Please try again.");
-                                                // Continue in the login menu
-                                            }
-                                        }
-                                        break;
-
-                                    case 4:
-                                        System.out.println("Back to Log in Menu.");
-                                        break;
-
-                                    default:
-                                        System.out.println("Invalid choice. Please try again.");
-                                        continue; // This will continue the loop and prompt the user again.
-                                }
-                                break; // Exit the role selection loop once a valid option is selected
+                try {
+		            int choice = Integer.parseInt(input);
+		            
+		            switch (choice) {
+		                case 1:
+		                    System.out.print("Enter NRIC: ");
+		                    String nric = scanner.nextLine();
+		                    System.out.print("Enter Password: ");
+		                    String password = scanner.nextLine();
+		                    
+		                    User user = authController.loginUser(nric, password);
+		                    if (user != null) {
+		                        displayUserMenu(user);
+		                    } else {
+		                        System.out.println("Invalid credentials. Please try again.");
+		                        continue;
+		                    }
+		                    break;
+		                case 2:
+		                    while (true) {
+		                        try {
+		                            System.out.println("Pick a Role:");
+		                            System.out.println("1) Applicant");
+		                            System.out.println("2) HDB Officer");
+		                            System.out.println("3) HDB Manager");
+		                            System.out.println("4) Go Back");
+		                            System.out.print("Enter your choice: ");
+		                            
+		                            String roleInput = scanner.nextLine().trim();
+		                            
+		                            if (roleInput.isEmpty()) {
+		                                System.out.println("Please enter a valid option.");
+		                                continue;
+		                            }
+		                            
+		                            int rolechoice = Integer.parseInt(roleInput);
+		
+		                            switch(rolechoice) {
+		                                case 1:
+		                                    User applicantData = signUp();
+		                                    Applicant applicant = new Applicant(
+		                                        applicantData.getNric(),
+		                                        applicantData.getPassword(),
+		                                        applicantData.getAge(),
+		                                        applicantData.getMaritalStatus(),
+		                                        applicantData.getName()
+		                                    );
+		                                    System.out.println("Applicant registered successfully!");
+		                                    if (authController.addUser(applicant)) {
+		                                        User newuser = authController.loginUser(applicantData.getNric(), applicantData.getPassword());
+		                                        if (newuser != null) {
+		                                            displayUserMenu(newuser);
+		                                        } else {
+		                                            System.out.println("Invalid credentials. Please try again.");
+		                                            // Continue in the login menu
+		                                        }
+		                                    }
+		                                    break;
+		                                    
+		                                case 2:
+		                                    User officerData = signUp();
+		                                    HDBOfficer officer = new HDBOfficer(
+		                                        officerData.getNric(),
+		                                        officerData.getPassword(),
+		                                        officerData.getAge(),
+		                                        officerData.getMaritalStatus(),
+		                                        officerData.getName()
+		                                    );
+		                                    System.out.println("HDB Officer registered successfully!");
+		                                    if (authController.addUser(officer)) {
+		                                        User newuser = authController.loginUser(officerData.getNric(), officerData.getPassword());
+		                                        if (newuser != null) {
+		                                            displayUserMenu(newuser);
+		                                        } else {
+		                                            System.out.println("Invalid credentials. Please try again.");
+		                                            // Continue in the login menu
+		                                        }
+		                                    }
+		                                    break;
+		
+		                                case 3:
+		                                    User managerData = signUp();
+		                                    HDBManager manager = new HDBManager(
+		                                        managerData.getNric(),
+		                                        managerData.getPassword(),
+		                                        managerData.getAge(),
+		                                        managerData.getMaritalStatus(),
+		                                        managerData.getName()
+		                                    );
+		                                    System.out.println("HDB Manager registered successfully!");
+		                                    if (authController.addUser(manager)) {
+		                                        User newuser = authController.loginUser(managerData.getNric(), managerData.getPassword());
+		                                        if (newuser != null) {
+		                                            displayUserMenu(newuser);
+		                                        } else {
+		                                            System.out.println("Invalid credentials. Please try again.");
+		                                            // Continue in the login menu
+		                                        }
+		                                    }
+		                                    break;
+		
+		                                case 4:
+		                                    System.out.println("Back to Log in Menu.");
+		                                    displayLoginMenu();
+		                                    return;
+		
+		                                default:
+		                                    System.out.println("Invalid choice. Please try again.");
+		                                    continue; // This will continue the loop and prompt the user again.
+		                            }
                             } catch (NumberFormatException e) {
                                 System.out.println("Invalid input. Please enter a number.");
-                            } catch (Exception e) {
-                                System.out.println("An error occurred: " + e.getMessage());
-                                System.out.println("Please try again.");
-                            }
+                            	} catch (Exception e) {
+                                    System.out.println("An error occurred: " + e.getMessage());
+                                    System.out.println("Please try again.");
+                            	}
                         }
-                        break;
                     case 0:
                         System.out.println("Thank you for using BTO Management System.");
                         System.exit(0);
                         return;
                     default:
                         System.out.println("Invalid choice. Please try again.");
-                        displayLoginMenu();
-                        break;
+                        continue;
                 }
-            }
+            } catch (NumberFormatException e) {
+                // Catch exception if input is not a valid number
+                System.out.println("Invalid input. Please enter a valid number.");
+            	} catch (Exception e) {
+                    System.out.println("An error occurred: " + e.getMessage());
+                    System.out.println("Please try again.");
+                }
+        }
+    }
        
 
     public void displayUserMenu(User user) {

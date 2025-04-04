@@ -59,6 +59,58 @@ public class ApplicantInterface {
         return this.currentApplicant;
     }
     
+    // Helper method for getting integer input with validation
+    private int getValidIntegerInput(String prompt, int min, int max) {
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine().trim();
+            
+            if (input.isEmpty()) {
+                System.out.println("Input cannot be empty. Please enter a valid number.");
+                continue;
+            }
+            
+            try {
+                int value = Integer.parseInt(input);
+                
+                if (value < min || value > max) {
+                    System.out.println("Please enter a number between " + min + " and " + max);
+                    continue;
+                }
+                
+                return value;
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a number.");
+            }
+        }
+    }
+    
+    // Helper method for getting integer input with only minimum bound
+    private int getValidIntegerInput(String prompt, int min) {
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine().trim();
+            
+            if (input.isEmpty()) {
+                System.out.println("Input cannot be empty. Please enter a valid number.");
+                continue;
+            }
+            
+            try {
+                int value = Integer.parseInt(input);
+                
+                if (value < min) {
+                    System.out.println("Please enter a number of at least " + min);
+                    continue;
+                }
+                
+                return value;
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a number.");
+            }
+        }
+    }
+    
     public void displayApplicantMenu(Applicant applicant) {
         setCurrentApplicant(applicant);
         
@@ -75,16 +127,8 @@ public class ApplicantInterface {
                 System.out.println("8. Change Password");
                 System.out.println("9. Display Profile");
                 System.out.println("0. Logout");
-                System.out.print("Enter your choice: ");
                 
-                String input = scanner.nextLine().trim();
-                
-                if (input.isEmpty()) {
-                    System.out.println("Please enter a valid option.");
-                    continue;
-                }
-                
-                int choice = Integer.parseInt(input);
+                int choice = getValidIntegerInput("Enter your choice: ", 0, 9);
                 
                 switch(choice) {
                     case 1:
@@ -122,8 +166,6 @@ public class ApplicantInterface {
                     default:
                         System.out.println("Invalid option. Please try again.");
                 }
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid input. Please enter a number.");
             } catch (Exception e) {
                 System.out.println("An error occurred: " + e.getMessage());
                 System.out.println("Please try again.");
@@ -162,118 +204,103 @@ public class ApplicantInterface {
     }
     
     private Project displayProjectDetails(List<Project> visibleProjects) {
-        System.out.print("Enter the project number to view details (or 0 to go back): ");
-        try {
-            int projectChoice = Integer.parseInt(scanner.nextLine());
-            
-            // Check if the choice is valid
-            if (projectChoice == 0) {
-                // Return to previous menu
-                displayApplicantMenu(currentApplicant);
-                return null;
-            }
-            
-            if (projectChoice < 1 || projectChoice > visibleProjects.size()) {
-                System.out.println("Invalid project number. Please try again.");
-                return displayProjectDetails(visibleProjects);
-                
-            }
-            
-            // Get the selected project (subtract 1 because list is 0-indexed)
-            Project selectedProject = visibleProjects.get(projectChoice - 1);
-            
-            // Display detailed project information
-            System.out.println("\n=== PROJECT DETAILS ===");
-            System.out.println("Project Name: " + selectedProject.getProjectName());
-            System.out.println("Neighborhood: " + selectedProject.getNeighborhood());
-            
-            // Format dates for display
-            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
-            System.out.println("Application Open Date: " + dateFormat.format(selectedProject.getApplicationOpenDate()));
-            System.out.println("Application Close Date: " + dateFormat.format(selectedProject.getApplicationCloseDate()));
-            
-            // Manager in Charge
-            System.out.println("Manager in Charge: " + selectedProject.getManagerInCharge().getName());
-            
-            // Display Flat Types and Availability
-            System.out.println("\nFlat Types and Availability:");
-            System.out.println("Flat Type                Total Units           Available Units");
-            System.out.println("----------------------------------------------------------------------");
-            Map<FlatType, Integer> flatTypeUnits = selectedProject.getFlatTypeUnits();
-            ProjectFlats projectFlats = selectedProject.getProjectFlats();
-
-            for (FlatType flatType : flatTypeUnits.keySet()) {
-                int totalUnits = flatTypeUnits.get(flatType);
-                int availableUnits = projectFlats.getAvailableFlatCount(flatType);
-                
-                System.out.printf("%-25s %10d %20d%n", 
-                    flatType.name(), 
-                    totalUnits, 
-                    availableUnits
-                );
-            }
-            
-            // Check Eligibility for the Current Applicant
-            List<FlatType> eligibleTypes = selectedProject.getEligibleFlatTypes(currentApplicant);
-            System.out.println("\nYour Eligible Flat Types:");
-            if (eligibleTypes.isEmpty()) {
-                System.out.println("  No flat types currently available for your profile.");
-            } else {
-                for (FlatType type : eligibleTypes) {
-                    System.out.println("  - " + type.name());
-                }
-            }
-            return selectedProject;
-        } catch (NumberFormatException e) {
-            System.out.println("Invalid input. Please enter a number.");
-            return displayProjectDetails(visibleProjects);
+        if (visibleProjects.isEmpty()) {
+            return null;
         }
+        
+        int projectChoice = getValidIntegerInput("Enter the project number to view details (or 0 to go back): ", 0, visibleProjects.size());
+        
+        if (projectChoice == 0) {
+            // Return to previous menu
+            displayApplicantMenu(currentApplicant);
+            return null;
+        }
+        
+        // Get the selected project (subtract 1 because list is 0-indexed)
+        Project selectedProject = visibleProjects.get(projectChoice - 1);
+        
+        // Display detailed project information
+        System.out.println("\n=== PROJECT DETAILS ===");
+        System.out.println("Project Name: " + selectedProject.getProjectName());
+        System.out.println("Neighborhood: " + selectedProject.getNeighborhood());
+        
+        // Format dates for display
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+        System.out.println("Application Open Date: " + dateFormat.format(selectedProject.getApplicationOpenDate()));
+        System.out.println("Application Close Date: " + dateFormat.format(selectedProject.getApplicationCloseDate()));
+        
+        // Manager in Charge
+        System.out.println("Manager in Charge: " + selectedProject.getManagerInCharge().getName());
+        
+        // Display Flat Types and Availability
+        System.out.println("\nFlat Types and Availability:");
+        System.out.println("Flat Type                Total Units           Available Units");
+        System.out.println("----------------------------------------------------------------------");
+        Map<FlatType, Integer> flatTypeUnits = selectedProject.getFlatTypeUnits();
+        ProjectFlats projectFlats = selectedProject.getProjectFlats();
+
+        for (FlatType flatType : flatTypeUnits.keySet()) {
+            int totalUnits = flatTypeUnits.get(flatType);
+            int availableUnits = projectFlats.getAvailableFlatCount(flatType);
+            
+            System.out.printf("%-25s %10d %20d%n", 
+                flatType.name(), 
+                totalUnits, 
+                availableUnits
+            );
+        }
+        
+        // Check Eligibility for the Current Applicant
+        List<FlatType> eligibleTypes = selectedProject.getEligibleFlatTypes(currentApplicant);
+        System.out.println("\nYour Eligible Flat Types:");
+        if (eligibleTypes.isEmpty()) {
+            System.out.println("  No flat types currently available for your profile.");
+        } else {
+            for (FlatType type : eligibleTypes) {
+                System.out.println("  - " + type.name());
+            }
+        }
+        return selectedProject;
     }
     
     private void applicationConfirmation(Project selectedProject) {
+        if (selectedProject == null) {
+            return;
+        }
+        
         System.out.println("\nOptions:");
         System.out.println("1) Apply");
         System.out.println("0) Go Back");
-        System.out.print("Enter your choice: ");
+        
+        int choice = getValidIntegerInput("Enter your choice: ", 0, 1);
 
-        try {
-            int choice = Integer.parseInt(scanner.nextLine());
-
-            switch (choice) {
-                case 1:
-                    // Attempt to submit application
-                    Boolean applicationResult = applicationController.submitApplication(currentApplicant, selectedProject);
+        switch (choice) {
+            case 1:
+                // Attempt to submit application
+                Boolean applicationResult = applicationController.submitApplication(currentApplicant, selectedProject);
+                
+                if (applicationResult) {
+                    System.out.println("\n=== APPLICATION SUBMITTED ===");
+                    System.out.println("Your application is pending.");
+                    System.out.println("Project: " + selectedProject.getProjectName());
+                    System.out.println("Status: Pending");
                     
-                    if (applicationResult) {
-                        System.out.println("\n=== APPLICATION SUBMITTED ===");
-                        System.out.println("Your application is pending.");
-                        System.out.println("Project: " + selectedProject.getProjectName());
-                        System.out.println("Status: Pending");
-                        
-                        // Prompt to continue
-                        System.out.println("\nPress Enter to continue...");
-                        scanner.nextLine();
-                        
-                        // Return to projects list
-                        displayProjects();
-                    } else {
-                        System.out.println("Failed to submit application. You may already have an active application.");
-                        displayProjects();
-                    }
-                    break;
-                
-                case 0:
-                    // Go back to projects list
+                    // Prompt to continue
+                    System.out.println("\nPress Enter to continue...");
+                    scanner.nextLine();
+                    
+                    // Return to projects list
                     displayProjects();
-                    break;
-                
-                default:
-                    System.out.println("Invalid choice. Returning to projects list.");
+                } else {
+                    System.out.println("Failed to submit application. You may already have an active application.");
                     displayProjects();
-            }
-        } catch (NumberFormatException e) {
-            System.out.println("Invalid input. Returning to projects list.");
-            displayProjects();
+                }
+                break;
+            
+            case 0:
+                // Go back to projects list
+                displayProjects();
+                break;
         }
     }
     
@@ -311,41 +338,35 @@ public class ApplicantInterface {
             // Show options based on application status
             System.out.println("\nOptions:");
             
+            int maxChoice = 0;
+            
             if (application.getStatus() == ApplicationStatus.SUCCESSFUL && selectedFlatType == null) {
                 // For successful applications with no flat type selected yet, show option to select flat type
                 System.out.println("1. Select Flat Type");
+                maxChoice = 1;
             } else if (application.getStatus() == ApplicationStatus.BOOKED) {
                 // For booked applications, show option to view receipt
                 System.out.println("1. View Booking Receipt");
+                maxChoice = 1;
             }
             
             System.out.println("0. Back to Main Menu");
             
-            System.out.print("\nEnter your choice: ");
-            try {
-                int choice = Integer.parseInt(scanner.nextLine());
-                
-                if (choice == 1) {
-                    if (application.getStatus() == ApplicationStatus.SUCCESSFUL && selectedFlatType == null) {
-                        // Select flat type
-                        selectFlatType(application, project);
-                    } else if (application.getStatus() == ApplicationStatus.BOOKED) {
-                        // View booking receipt
-                        viewBookingReceipt(currentApplicant);
-                    }
-                } else if (choice != 0) {
-                    System.out.println("Invalid choice.");
+            int choice = getValidIntegerInput("\nEnter your choice: ", 0, maxChoice);
+            
+            if (choice == 1) {
+                if (application.getStatus() == ApplicationStatus.SUCCESSFUL && selectedFlatType == null) {
+                    // Select flat type
+                    selectFlatType(application, project);
+                } else if (application.getStatus() == ApplicationStatus.BOOKED) {
+                    // View booking receipt
+                    viewBookingReceipt(currentApplicant);
                 }
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid input. Please enter a number.");
+            } else {
+                // Return to main menu
+                displayApplicantMenu(currentApplicant);
             }
         }
-        
-        // Wait for user input before returning to menu
-        System.out.println("\nPress Enter to return to the main menu...");
-        scanner.nextLine();
-        
-        displayApplicantMenu(currentApplicant);
     }
 
     private void selectFlatType(ProjectApplication application, Project project) {
@@ -377,7 +398,6 @@ public class ApplicantInterface {
                 }
             }
             
-            
             if (availableTypes.isEmpty()) {
                 System.out.println("No eligible flat types currently have available units.");
             } else {
@@ -385,29 +405,18 @@ public class ApplicantInterface {
                 System.out.println("1. Select a Flat Type");
                 System.out.println("0. Cancel");
                 
-                System.out.print("\nEnter your choice: ");
-                try {
-                    int choice = Integer.parseInt(scanner.nextLine());
+                int choice = getValidIntegerInput("\nEnter your choice: ", 0, 1);
+                
+                if (choice == 1) {
+                    int flatTypeId = getValidIntegerInput("Enter the ID of the flat type you want to select: ", 1, availableTypes.size());
+                    FlatType selectedType = availableTypes.get(flatTypeId - 1);
                     
-                    if (choice == 1) {
-                        System.out.print("Enter the ID of the flat type you want to select: ");
-                        int flatTypeId = Integer.parseInt(scanner.nextLine());
-                        
-                        if (flatTypeId < 1 || flatTypeId > availableTypes.size()) {
-                            System.out.println("Invalid flat type ID.");
-                        } else {
-                            FlatType selectedType = availableTypes.get(flatTypeId - 1);
-                            
-                            // Update the application with the selected flat type
-                            application.setSelectedFlatType(selectedType);
-                            
-                            System.out.println("\nFlat type " + selectedType.toString() + " has been selected.");
-                            System.out.println("Your selection has been submitted and is pending officer approval.");
-                            System.out.println("You will be notified once your booking is confirmed.");
-                        }
-                    }
-                } catch (NumberFormatException e) {
-                    System.out.println("Invalid input. Please enter a number.");
+                    // Update the application with the selected flat type
+                    application.setSelectedFlatType(selectedType);
+                    
+                    System.out.println("\nFlat type " + selectedType.toString() + " has been selected.");
+                    System.out.println("Your selection has been submitted and is pending officer approval.");
+                    System.out.println("You will be notified once your booking is confirmed.");
                 }
             }
         }
@@ -415,8 +424,9 @@ public class ApplicantInterface {
         // Wait for user input before returning
         System.out.println("\nPress Enter to continue...");
         scanner.nextLine();
+        displayApplicantMenu(currentApplicant);
     }
-    
+
     private void changePasswordInterface() {
         System.out.println("\n=== CHANGE PASSWORD ===");
         

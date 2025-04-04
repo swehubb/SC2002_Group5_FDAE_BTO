@@ -10,17 +10,45 @@ import bto.Entities.*;
 
 public class BookingController {
     private Map<String, FlatBooking> bookings; // Simulate a database of bookings
-    private Map<String, String> rejectedBookings; // Track rejected bookings and reasons
     private ReceiptGenerator receiptGenerator;
 
     // Constructor
     public BookingController() {
         bookings = new HashMap<>();
-        rejectedBookings = new HashMap<>();
         receiptGenerator = new ReceiptGenerator();
     }
 
-    // Original method
+    // Method used in officer interface
+    public boolean createBooking(FlatBooking booking) {
+        if (booking == null || booking.getApplicant() == null) {
+            return false;
+        }
+
+        // Check if the applicant already has a booking
+        String nric = booking.getApplicant().getNric();
+        if (bookings.containsKey(nric)) {
+            return false; // Applicant already has a booking
+        }
+
+        // Set status to approved automatically when created by officer
+        booking.setBookingStatus(FlatBooking.STATUS_APPROVED);
+        
+        // Store the booking
+        bookings.put(nric, booking);
+
+        // Set the booking for the applicant
+        booking.getApplicant().setBookedFlat(booking);
+
+        // Update application status if applicable
+        ProjectApplication application = booking.getApplicant().getAppliedProject();
+        if (application != null && application.getStatus() == ApplicationStatus.SUCCESSFUL) {
+            application.setStatus(ApplicationStatus.BOOKED);
+        }
+
+        return true;
+    }
+
+    // Method to process a booking (old version preserved for compatibility)
     public FlatBooking processBooking(Applicant applicant, Project project, FlatType flatType) {
         // Check if the applicant has a successful application
         ProjectApplication application = applicant.getAppliedProject();
@@ -38,6 +66,7 @@ public class BookingController {
 
         // Create a new booking with the specific flat ID
         FlatBooking booking = new FlatBooking(applicant, project, flatType, flatId);
+        booking.setBookingStatus(FlatBooking.STATUS_APPROVED); // Approve immediately
 
         // Set the booking for the applicant
         applicant.setBookedFlat(booking);
@@ -49,33 +78,6 @@ public class BookingController {
         bookings.put(applicant.getNric(), booking);
 
         return booking;
-    }
-
-    // Method used in officer interface
-    public boolean createBooking(FlatBooking booking) {
-        if (booking == null || booking.getApplicant() == null) {
-            return false;
-        }
-
-        // Check if the applicant already has a booking
-        String nric = booking.getApplicant().getNric();
-        if (bookings.containsKey(nric)) {
-            return false; // Applicant already has a booking
-        }
-
-        // Store the booking
-        bookings.put(nric, booking);
-
-        // Set the booking for the applicant
-        booking.getApplicant().setBookedFlat(booking);
-
-        // Update application status if applicable
-        ProjectApplication application = booking.getApplicant().getAppliedProject();
-        if (application != null && application.getStatus() == ApplicationStatus.SUCCESSFUL) {
-            application.setStatus(ApplicationStatus.BOOKED);
-        }
-
-        return true;
     }
 
     // Overloaded createBooking method used in officer interface
@@ -101,6 +103,7 @@ public class BookingController {
 
         // Create a new booking with the specific flat ID
         FlatBooking booking = new FlatBooking(applicant, project, flatType, flatId);
+        booking.setBookingStatus(FlatBooking.STATUS_APPROVED); // Approve immediately
 
         // Set the booking for the applicant
         applicant.setBookedFlat(booking);
@@ -120,10 +123,31 @@ public class BookingController {
             return false;
         }
 
-        // Store rejection reason
         String nric = application.getApplicant().getNric();
-        rejectedBookings.put(nric, rejectionReason);
-
+        
+        // Check if there's an existing booking
+        FlatBooking existingBooking = bookings.get(nric);
+        
+        if (existingBooking != null) {
+            // Update existing booking with rejection
+            existingBooking.setBookingStatus(FlatBooking.STATUS_REJECTED);
+            existingBooking.setRejectionReason(rejectionReason);
+        } else {
+            // Create a rejected booking record
+            FlatBooking booking = new FlatBooking();
+            booking.setApplicant(application.getApplicant());
+            booking.setProject(application.getProject());
+            booking.setFlatType(application.getSelectedFlatType());
+            booking.setBookingStatus(FlatBooking.STATUS_REJECTED);
+            booking.setRejectionReason(rejectionReason);
+            
+            // Store in the database
+            bookings.put(nric, booking);
+            
+            // Set the booking for the applicant
+            application.getApplicant().setBookedFlat(booking);
+        }
+        
         return true;
     }
 
@@ -134,17 +158,21 @@ public class BookingController {
         }
 
         String nric = application.getApplicant().getNric();
-        return bookings.containsKey(nric);
+        FlatBooking booking = bookings.get(nric);
+        
+        return booking != null && booking.isApproved();
     }
 
-    // Method to get booking status
-    public boolean getBookingStatus(ProjectApplication application) {
+    // Method to get booking status for an application
+    public String getBookingStatus(ProjectApplication application) {
         if (application == null || application.getApplicant() == null) {
-            return false;
+            return null;
         }
 
         String nric = application.getApplicant().getNric();
-        return bookings.containsKey(nric);
+        FlatBooking booking = bookings.get(nric);
+        
+        return booking != null ? booking.getBookingStatus() : null;
     }
 
     // Method to get booking for an application
@@ -160,6 +188,45 @@ public class BookingController {
     // Method to get a list of all bookings
     public List<FlatBooking> getAllBookings() {
         return new ArrayList<>(bookings.values());
+    }
+
+    // Method to get pending bookings
+    public List<FlatBooking> getPendingBookings() {
+        List<FlatBooking> pendingBookings = new ArrayList<>();
+        
+        for (FlatBooking booking : bookings.values()) {
+            if (booking.isPending()) {
+                pendingBookings.add(booking);
+            }
+        }
+        
+        return pendingBookings;
+    }
+    
+    // Method to get approved bookings
+    public List<FlatBooking> getApprovedBookings() {
+        List<FlatBooking> approvedBookings = new ArrayList<>();
+        
+        for (FlatBooking booking : bookings.values()) {
+            if (booking.isApproved()) {
+                approvedBookings.add(booking);
+            }
+        }
+        
+        return approvedBookings;
+    }
+    
+    // Method to get rejected bookings
+    public List<FlatBooking> getRejectedBookings() {
+        List<FlatBooking> rejectedBookings = new ArrayList<>();
+        
+        for (FlatBooking booking : bookings.values()) {
+            if (booking.isRejected()) {
+                rejectedBookings.add(booking);
+            }
+        }
+        
+        return rejectedBookings;
     }
 
     // Original method

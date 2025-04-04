@@ -20,6 +20,8 @@ public class Project {
     private List<Enquiry> enquiries;
     private List<ProjectApplication> applications;
     private List<OfficerRegistration> officerRegistrations;
+    private int totalOfficerSlots; // New field to store total slots
+
     
     // New field for managing individual flats
     private ProjectFlats projectFlats;
@@ -288,4 +290,13 @@ public class Project {
             officerRegistrations.add(registration);
         }
     }
+    
+    public int getTotalOfficerSlots() {
+        return totalOfficerSlots;
+    }
+
+    public void setTotalOfficerSlots(int totalSlots) {
+        this.totalOfficerSlots = totalSlots;
+    }
+
 }

@@ -21,6 +21,11 @@ public class FileManager {
 	private static final String PROJECT_FILE = "./src/bto/data/Project List.txt";
 	private static final String OFFICER_FILE = "./src/bto/data/Officer List.txt";
 	private static final String MANAGER_FILE = "./src/bto/data/Manager List.txt";
+	private static final String OFFICER_REGISTRATION_FILE = "./src/bto/data/Officer Registration List.txt";	
+	private static final String ENQUIRY_FILE = "./src/bto/data/Enquiry List.txt";
+	private static final String APPLICATION_FILE = "./src/bto/data/Application List.txt";
+	private static final String REPORT_FILE = "./src/bto/data/Report List.txt";
+	private static final String BOOKING_FILE = "./src/bto/data/Booking List.txt";
  
  private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("dd/MM/yy");
  
@@ -142,147 +147,363 @@ public class FileManager {
 	    List<Project> projects = new ArrayList<>();
 	    Map<String, HDBManager> managerMap = createManagerMap(loadedManagers);
 	    Map<String, HDBOfficer> officerMap = createOfficerMap(loadedOfficers);
-     
-     try (BufferedReader reader = new BufferedReader(new FileReader(PROJECT_FILE))) {
-         String line;
-         // Skip header line
-         reader.readLine();
-         
-         while ((line = reader.readLine()) != null) {
-             if (line.trim().isEmpty()) continue;
-             
-             String[] parts = line.split("\\t");
-             if (parts.length < 12) continue;
-             
-             String projectName = parts[0].trim();
-             String neighborhood = parts[1].trim();
-             
-             // Parse flat types and units
-             FlatType type1 = convertToFlatType(parts[2].trim());
-             int units1 = Integer.parseInt(parts[3].trim());
-             int price1 = Integer.parseInt(parts[4].trim());
-             
-             FlatType type2 = convertToFlatType(parts[5].trim());
-             int units2 = Integer.parseInt(parts[6].trim());
-             int price2 = Integer.parseInt(parts[7].trim());
-             
-             // Parse dates
-             Date openDate = null;
-             Date closeDate = null;
-             try {
-                 openDate = DATE_FORMAT.parse(parts[8].trim());
-                 closeDate = DATE_FORMAT.parse(parts[9].trim());
-             } catch (ParseException e) {
-                 System.out.println("Warning: Failed to parse date for project " + projectName + ". " + e.getMessage());
-                 continue;
-             }
-             
-             // Parse manager and officer assignments
-             String managerName = parts[10].trim();
-             int officerSlots = Integer.parseInt(parts[11].trim());
-             
-             String officersString = parts.length > 12 ? parts[12].trim() : "";
-             String[] officerNames = officersString.replace("\"", "").split(",");
-             
-             // Create the project
-             Project project = new Project();
-             project.setProjectName(projectName);
-             project.setNeighborhood(neighborhood);
-             project.setApplicationOpenDate(openDate);
-             project.setApplicationCloseDate(closeDate);
-             project.setAvailableHDBOfficerSlots(officerSlots);
-             
-             // Set flat type units
-             Map<FlatType, Integer> flatTypeUnits = new HashMap<>();
-             flatTypeUnits.put(type1, units1);
-             flatTypeUnits.put(type2, units2);
-             project.setFlatTypeUnits(flatTypeUnits);
-             
-             // Set visibility (default to false for now)
-             project.setVisible(true);
-             
-             // Set manager
-             HDBManager manager = findManagerByName(managerName, managerMap);
-             if (manager != null) {
-                 project.setManagerInCharge(manager);
-                 
-                 // Also set this project as the managed project for the manager
-                 manager.setManagedProject(project);
-             }
-             
-          // Inside the loadProjects method, add these debug lines:
-             System.out.println("Loading projects...");
-             System.out.println("Available officers: " + officerMap.keySet());
+	     
+	    try (BufferedReader reader = new BufferedReader(new FileReader(PROJECT_FILE))) {
+	        String line;
+	        // Skip header line
+	        reader.readLine();
+	         
+	        while ((line = reader.readLine()) != null) {
+	            if (line.trim().isEmpty()) continue;
+	             
+	            String[] parts = line.split("\\t");
+	            if (parts.length < 12) continue;
+	             
+	            String projectName = parts[0].trim();
+	            String neighborhood = parts[1].trim();
+	             
+	            // Parse flat types and units
+	            FlatType type1 = convertToFlatType(parts[2].trim());
+	            int units1 = Integer.parseInt(parts[3].trim());
+	            int price1 = Integer.parseInt(parts[4].trim());
+	             
+	            FlatType type2 = convertToFlatType(parts[5].trim());
+	            int units2 = Integer.parseInt(parts[6].trim());
+	            int price2 = Integer.parseInt(parts[7].trim());
+	             
+	            // Parse dates
+	            Date openDate = null;
+	            Date closeDate = null;
+	            try {
+	                openDate = DATE_FORMAT.parse(parts[8].trim());
+	                closeDate = DATE_FORMAT.parse(parts[9].trim());
+	            } catch (ParseException e) {
+	                System.out.println("Warning: Failed to parse date for project " + projectName + ". " + e.getMessage());
+	                continue;
+	            }
+	             
+	            // Parse manager and officer assignments
+	            String managerName = parts[10].trim();
+	            int totalOfficerSlots = Integer.parseInt(parts[11].trim());
+	             
+	            String officersString = parts.length > 12 ? parts[12].trim() : "";
+	            String[] officerNames = officersString.replace("\"", "").split(",");
+	             
+	            // Create the project
+	            Project project = new Project();
+	            project.setProjectName(projectName);
+	            project.setNeighborhood(neighborhood);
+	            project.setApplicationOpenDate(openDate);
+	            project.setApplicationCloseDate(closeDate);
+	            project.setTotalOfficerSlots(totalOfficerSlots);
+	            project.setAvailableHDBOfficerSlots(calculateAvailableSlots(totalOfficerSlots,officerNames, officerMap));
 
-             // Inside the officer assignment loop:
-             for (String officerName : officerNames) {
-                 System.out.println("Processing officer name: '" + officerName.trim() + "'");
-                 if (officerName.trim().isEmpty()) {
-                     System.out.println("Empty officer name, skipping");
-                     continue;
-                 }
-                 
-                 HDBOfficer officer = findOfficerByName(officerName.trim(), officerMap);
-                 System.out.println("Found officer: " + (officer != null ? officer.getName() : "null"));
-                 
-                 if (officer != null) {
-                     System.out.println("Adding project " + project.getProjectName() + " to officer " + officer.getName());
-                     // Rest of the code...
-                 }
-             }
-             // Assign officers
-          // In FileManager's loadProjects method:
-          // When processing assigned officers:
-          for (String officerName : officerNames) {
-              if (officerName.trim().isEmpty()) continue;
-              
-              HDBOfficer officer = findOfficerByName(officerName.trim(), officerMap);
-              if (officer != null) {
-                  // Add project to officer's assigned projects
-                  officer.addAssignedProject(project);
-                  
-                  // Create officer registration (with APPROVED status)
-                  OfficerRegistration registration = new OfficerRegistration(officer, project);
-                  registration.setRegistrationStatus("APPROVED");
-                  
-                  // Add registration to both officer and project
-                  officer.addRegistration(registration);
-                  project.addOfficerRegistration(registration);
-                  
-                  // Reduce available slots (do this for each assigned officer)
-                  project.setAvailableHDBOfficerSlots(project.getAvailableHDBOfficerSlots() - 1);
-              }
-          }
-             
-             projects.add(project);
-         }
-         
-     } catch (IOException e) {
-         System.out.println("Warning: Failed to load projects data. " + e.getMessage());
-     }
-     
-     return projects;
- }
+	             
+	            // Set flat type units
+	            Map<FlatType, Integer> flatTypeUnits = new HashMap<>();
+	            flatTypeUnits.put(type1, units1);
+	            flatTypeUnits.put(type2, units2);
+	            project.setFlatTypeUnits(flatTypeUnits);
+	             
+	            // Set visibility (default to false for now)
+	            project.setVisible(true);
+	             
+	            // Set manager
+	            HDBManager manager = findManagerByName(managerName, managerMap);
+	            if (manager != null) {
+	                project.setManagerInCharge(manager);
+	                 
+	                // Also set this project as the managed project for the manager
+	                manager.setManagedProject(project);
+	            }
+	             
+	            // Assign officers
+	            for (String officerName : officerNames) {
+	                if (officerName.trim().isEmpty()) continue;
+	                 
+	                HDBOfficer officer = findOfficerByName(officerName.trim(), officerMap);
+	                if (officer != null) {
+	                    // Add project to officer's assigned projects
+	                    officer.addAssignedProject(project);
+	                     
+	                    // Create officer registration (with APPROVED status)
+	                    OfficerRegistration registration = new OfficerRegistration(officer, project);
+	                    registration.setRegistrationStatus("APPROVED");
+	                     
+	                    // Add registration to both officer and project
+	                    officer.addRegistration(registration);
+	                    project.addOfficerRegistration(registration);
+	                }
+	            }
+	             
+	            projects.add(project);
+	        }
+	         
+	    } catch (IOException e) {
+	        System.out.println("Warning: Failed to load projects data. " + e.getMessage());
+	    }
+	     
+	    return projects;
+	}
  
- // Application loading method - placeholder, implement when you have the file
- public List<ProjectApplication> loadApplications() {
-     List<ProjectApplication> applications = new ArrayList<>();
-     
-     // Implementation would depend on the format of your Application List.txt file
-     // For now, this returns an empty list
-     
-     return applications;
- }
+ private int calculateAvailableSlots(int totalOfficerSlots,String[] officerNames, Map<String, HDBOfficer> officerMap) {
+	    int assignedOfficers = 0;
+	    for (String officerName : officerNames) {
+	        if (officerName.trim().isEmpty()) continue;
+	        
+	        HDBOfficer officer = findOfficerByName(officerName.trim(), officerMap);
+	        if (officer != null) {
+	            assignedOfficers++;
+	        }
+	    }
+	    
+	    return Math.max(0, totalOfficerSlots - assignedOfficers);
+	}
  
- // Enquiry loading method - placeholder, implement when you have the file
- public List<Enquiry> loadEnquiries() {
-     List<Enquiry> enquiries = new ArrayList<>();
-     
-     // Implementation would depend on the format of your Enquiry List.txt file
-     // For now, this returns an empty list
-     
-     return enquiries;
- }
+ public List<ProjectApplication> loadApplications(List<Applicant> applicants, List<Project> projects) {
+	    List<ProjectApplication> applications = new ArrayList<>();
+	    
+	    try (BufferedReader reader = new BufferedReader(new FileReader(APPLICATION_FILE))) {
+	        String line;
+	        // Skip header
+	        reader.readLine();
+	        
+	        while ((line = reader.readLine()) != null) {
+	            String[] parts = line.split("\t");
+	            if (parts.length < 5) continue;
+	            
+	            // Find matching applicant and project
+	            Applicant applicant = findApplicantByNRIC(parts[0], applicants);
+	            Project project = findProjectByName(parts[1], projects);
+	            
+	            if (applicant != null && project != null) {
+	                ProjectApplication application = new ProjectApplication(applicant, project);
+	                
+	                // Set status
+	                application.setStatus(ApplicationStatus.valueOf(parts[2]));
+	                
+	                // Set withdrawal status
+	                if (!"N/A".equals(parts[3])) {
+	                    application.setWithdrawalStatus(parts[3]);
+	                }
+	                
+	                // Set selected flat type
+	                if (!"N/A".equals(parts[4])) {
+	                    application.setSelectedFlatType(FlatType.valueOf(parts[4]));
+	                }
+	                
+	                applications.add(application);
+	            }
+	        }
+	    } catch (IOException e) {
+	        System.out.println("Error loading applications: " + e.getMessage());
+	    }
+	    
+	    return applications;
+	}
+
+	public List<Enquiry> loadEnquiries(List<Applicant> applicants, List<Project> projects) {
+	    List<Enquiry> enquiries = new ArrayList<>();
+	    
+	    try (BufferedReader reader = new BufferedReader(new FileReader(ENQUIRY_FILE))) {
+	        String line;
+	        // Skip header
+	        reader.readLine();
+	        
+	        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+	        
+	        while ((line = reader.readLine()) != null) {
+	            String[] parts = line.split("\t");
+	            if (parts.length < 5) continue;
+	            
+	            // Find matching applicant and project
+	            Applicant applicant = findApplicantByNRIC(parts[0], applicants);
+	            Project project = findProjectByName(parts[1], projects);
+	            
+	            if (applicant != null && project != null) {
+	                Enquiry enquiry = new Enquiry(applicant, project, parts[2]);
+	                
+	                // Set response if exists
+	                if (!"N/A".equals(parts[3])) {
+	                    enquiry.setResponse(parts[3]);
+	                }
+	                
+	                // Set submission date
+	                try {
+	                    enquiry.setSubmissionDate(dateFormat.parse(parts[4]));
+	                } catch (ParseException e) {
+	                    // Use current date if parsing fails
+	                    enquiry.setSubmissionDate(new Date());
+	                }
+	                
+	                enquiries.add(enquiry);
+	            }
+	        }
+	    } catch (IOException e) {
+	        System.out.println("Error loading enquiries: " + e.getMessage());
+	    }
+	    
+	    return enquiries;
+	}
+
+	// Helper methods to find applicant and project
+	private Applicant findApplicantByNRIC(String nric, List<Applicant> applicants) {
+	    return applicants.stream()
+	        .filter(a -> a.getNric().equals(nric))
+	        .findFirst()
+	        .orElse(null);
+	}
+
+	private Project findProjectByName(String projectName, List<Project> projects) {
+	    return projects.stream()
+	        .filter(p -> p.getProjectName().equals(projectName))
+	        .findFirst()
+	        .orElse(null);
+	}
+	
+
+	public List<OfficerRegistration> loadOfficerRegistrations(
+	    List<HDBOfficer> officers, 
+	    List<Project> projects
+	) {
+	    List<OfficerRegistration> registrations = new ArrayList<>();
+	    
+	    try (BufferedReader reader = new BufferedReader(new FileReader(OFFICER_REGISTRATION_FILE))) {
+	        // Skip header
+	        reader.readLine();
+	        
+	        String line;
+	        while ((line = reader.readLine()) != null) {
+	            String[] parts = line.split("\t");
+	            if (parts.length < 3) continue;
+	            
+	            // Find matching officer and project
+	            HDBOfficer officer = findOfficerByNRIC(parts[0], officers);
+	            Project project = findProjectByName(parts[1], projects);
+	            
+	            if (officer != null && project != null) {
+	                OfficerRegistration registration = new OfficerRegistration(officer, project);
+	                registration.setRegistrationStatus(parts[2]);
+	                
+	                registrations.add(registration);
+	                
+	                // Link registration to officer and project
+	                officer.addRegistration(registration);
+	                project.addOfficerRegistration(registration);
+	            }
+	        }
+	    } catch (IOException e) {
+	        System.out.println("Error loading officer registrations: " + e.getMessage());
+	    }
+	    
+	    return registrations;
+	}
+	private HDBOfficer findOfficerByNRIC(String nric, List<HDBOfficer> officers) {
+	    return officers.stream()
+	        .filter(officer -> officer.getNric().equals(nric))
+	        .findFirst()
+	        .orElse(null);
+	}
+	
+
+	public List<Report> loadReports() {
+	    List<Report> reports = new ArrayList<>();
+	    
+	    try (BufferedReader reader = new BufferedReader(new FileReader(REPORT_FILE))) {
+	        // Skip header
+	        reader.readLine();
+	        
+	        String line;
+	        while ((line = reader.readLine()) != null) {
+	            String[] parts = line.split("\t");
+	            if (parts.length < 3) continue;
+	            
+	            // Create report with loaded information
+	            FilterCriteria criteria = new FilterCriteria();
+	            Report report = new Report(parts[0], criteria);
+	            
+	            reports.add(report);
+	        }
+	    } catch (IOException e) {
+	        System.out.println("Error loading reports: " + e.getMessage());
+	    }
+	    
+	    return reports;
+	}
+
+	/**
+	 * Loads flat bookings from file
+	 * 
+	 * @param applicants List of loaded applicants for reference linking
+	 * @param projects List of loaded projects for reference linking
+	 * @return List of all bookings loaded from file
+	 */
+	public List<FlatBooking> loadBookings(List<Applicant> applicants, List<Project> projects) {
+	    List<FlatBooking> bookings = new ArrayList<>();
+	    
+	    try (BufferedReader reader = new BufferedReader(new FileReader(BOOKING_FILE))) {
+	        String line;
+	        // Skip header line
+	        reader.readLine();
+	        
+	        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+	        
+	        while ((line = reader.readLine()) != null) {
+	            if (line.trim().isEmpty()) continue;
+	            
+	            String[] parts = line.split("\\t");
+	            if (parts.length < 6) continue; // Need at least 6 fields with status
+	            
+	            // Find matching applicant and project
+	            Applicant applicant = findApplicantByNRIC(parts[0], applicants);
+	            Project project = findProjectByName(parts[1], projects);
+	            
+	            if (applicant != null && project != null) {
+	                // Create booking
+	                FlatBooking booking = new FlatBooking();
+	                booking.setApplicant(applicant);
+	                booking.setProject(project);
+	                booking.setFlatType(FlatType.valueOf(parts[2]));
+	                booking.setFlatId(Integer.parseInt(parts[3]));
+	                
+	                // Parse booking date
+	                try {
+	                    booking.setBookingDate(dateFormat.parse(parts[4]));
+	                } catch (ParseException e) {
+	                    // Use current date if parsing fails
+	                    booking.setBookingDate(new Date());
+	                }
+	                
+	                // Set booking status
+	                booking.setBookingStatus(parts[5]);
+	                
+	                // Set rejection reason if available
+	                if (parts.length > 6 && !parts[6].equals("N/A")) {
+	                    booking.setRejectionReason(parts[6]);
+	                }
+	                
+	                // Link the booking to the applicant
+	                applicant.setBookedFlat(booking);
+	                
+	                // Update application status if this is an approved booking
+	                if (booking.isApproved()) {
+	                    ProjectApplication application = applicant.getAppliedProject();
+	                    if (application != null && application.getStatus() == ApplicationStatus.SUCCESSFUL) {
+	                        application.setStatus(ApplicationStatus.BOOKED);
+	                    }
+	                }
+	                
+	                bookings.add(booking);
+	            }
+	        }
+	        
+	        System.out.println("Successfully loaded " + bookings.size() + " bookings from file.");
+	    } catch (IOException e) {
+	        System.out.println("Warning: Failed to load bookings data. " + e.getMessage());
+	    }
+	    
+	    return bookings;
+	}
  
  // Save methods
  public boolean saveApplicants(List<Applicant> applicants) {
@@ -358,69 +579,215 @@ public class FileManager {
  }
  
  public boolean saveProjects(List<Project> projects) {
-     try (BufferedWriter writer = new BufferedWriter(new FileWriter(PROJECT_FILE))) {
-         // Write header
-         writer.write("Project Name\tNeighborhood\tType 1\tNumber of units for Type 1\tSelling price for Type 1\tType 2\tNumber of units for Type 2\tSelling price for Type 2\tApplication opening date\tApplication closing date\tManager\tOfficer Slot\tOfficer");
-         writer.newLine();
-         
-         // Write data
-         for (Project project : projects) {
-             // Extract flat types and units
-             Map<FlatType, Integer> flatTypeUnits = project.getFlatTypeUnits();
-             FlatType[] flatTypes = flatTypeUnits.keySet().toArray(new FlatType[0]);
-             
-             FlatType type1 = flatTypes.length > 0 ? flatTypes[0] : FlatType.TWO_ROOM;
-             int units1 = flatTypeUnits.getOrDefault(type1, 0);
-             int price1 = 0; // Placeholder, as price isn't stored in your current model
-             
-             FlatType type2 = flatTypes.length > 1 ? flatTypes[1] : FlatType.THREE_ROOM;
-             int units2 = flatTypeUnits.getOrDefault(type2, 0);
-             int price2 = 0; // Placeholder
-             
-             // Get manager name
-             String managerName = "Unknown";
-             if (project.getManagerInCharge() != null) {
-                 managerName = project.getManagerInCharge().getName();
-             }
-             
-             // Get assigned officers
-             StringBuilder officerNames = new StringBuilder();
-             boolean first = true;
-             
-             for (OfficerRegistration reg : project.getOfficerRegistrations()) {
-                 if ("APPROVED".equals(reg.getRegistrationStatus())) {
-                     if (!first) {
-                         officerNames.append(",");
-                     }
-                     officerNames.append(reg.getHdbOfficer().getName());
-                     first = false;
-                 }
-             }
-             
-             // Format and write the project data
-             writer.write(String.format("%s\t%s\t%s\t%d\t%d\t%s\t%d\t%d\t%s\t%s\t%s\t%d\t\"%s\"",
-                 project.getProjectName(),
-                 project.getNeighborhood(),
-                 formatFlatType(type1),
-                 units1,
-                 price1,
-                 formatFlatType(type2),
-                 units2,
-                 price2,
-                 DATE_FORMAT.format(project.getApplicationOpenDate()),
-                 DATE_FORMAT.format(project.getApplicationCloseDate()),
-                 managerName,
-                 project.getAvailableHDBOfficerSlots(),
-                 officerNames.toString()));
-             writer.newLine();
-         }
-         
-         return true;
-     } catch (IOException e) {
-         System.out.println("Error: Failed to save projects data. " + e.getMessage());
-         return false;
-     }
- }
+	    try (BufferedWriter writer = new BufferedWriter(new FileWriter(PROJECT_FILE))) {
+	        // Write header
+	        writer.write("Project Name\tNeighborhood\tType 1\tNumber of units for Type 1\tSelling price for Type 1\tType 2\tNumber of units for Type 2\tSelling price for Type 2\tApplication opening date\tApplication closing date\tManager\tTotal Officer Slot\tAssigned Officers");
+	        writer.newLine();
+
+	        for (Project project : projects) {
+	            // Extract flat types and units
+	            Map<FlatType, Integer> flatTypeUnits = project.getFlatTypeUnits();
+	            FlatType[] flatTypes = flatTypeUnits.keySet().toArray(new FlatType[0]);
+
+	            FlatType type1 = flatTypes.length > 0 ? flatTypes[0] : FlatType.TWO_ROOM;
+	            int units1 = flatTypeUnits.getOrDefault(type1, 0);
+	            int price1 = 0; // Placeholder
+
+	            FlatType type2 = flatTypes.length > 1 ? flatTypes[1] : FlatType.THREE_ROOM;
+	            int units2 = flatTypeUnits.getOrDefault(type2, 0);
+	            int price2 = 0; // Placeholder
+
+	            // Get manager name
+	            String managerName = "Unknown";
+	            if (project.getManagerInCharge() != null) {
+	                managerName = project.getManagerInCharge().getName();
+	            }
+
+	            // Count actually assigned officers with APPROVED status
+	            int assignedOfficerCount = 0;
+	            StringBuilder officerNames = new StringBuilder();
+	            boolean first = true;
+
+	            for (OfficerRegistration reg : project.getOfficerRegistrations()) {
+	                if ("APPROVED".equals(reg.getRegistrationStatus())) {
+	                    if (!first) {
+	                        officerNames.append(",");
+	                    }
+	                    String current_name = reg.getHdbOfficer().getName();
+	                    if (officerNames.toString().contains(current_name)) {
+	                        continue;
+	                    }
+	                    officerNames.append(current_name);
+	                    assignedOfficerCount++;
+	                    first = false;
+	                }
+	            }
+
+	            // Calculate total officer slots (original max slots)
+	            int totalOfficerSlots = project.getAvailableHDBOfficerSlots() + assignedOfficerCount;
+
+	            // Format and write the project data
+	         // Save the TOTAL officer slots
+	            writer.write(String.format("%s\t%s\t%s\t%d\t%d\t%s\t%d\t%d\t%s\t%s\t%s\t%d\t\"%s\"",
+	                project.getProjectName(),
+	                project.getNeighborhood(),
+	                formatFlatType(type1),
+	                units1,
+	                price1,
+	                formatFlatType(type2),
+	                units2,
+	                price2,
+	                DATE_FORMAT.format(project.getApplicationOpenDate()),
+	                DATE_FORMAT.format(project.getApplicationCloseDate()),
+	                managerName,
+	                project.getTotalOfficerSlots(), // New method to get total slots
+	                officerNames.toString()));
+	            writer.newLine();
+	        }
+
+	        return true;
+	    } catch (IOException e) {
+	        System.out.println("Error: Failed to save projects data. " + e.getMessage());
+	        return false;
+	    }
+	}
+ 
+ public boolean saveApplications(List<ProjectApplication> applications) {
+	    try (BufferedWriter writer = new BufferedWriter(new FileWriter(APPLICATION_FILE))) {
+	        // Write header
+	        writer.write("Applicant NRIC\tProject Name\tStatus\tWithdrawal Status\tSelected Flat Type");
+	        writer.newLine();
+	        
+	        // Write data
+	        for (ProjectApplication app : applications) {
+	            writer.write(String.format("%s\t%s\t%s\t%s\t%s",
+	                app.getApplicant().getNric(),
+	                app.getProject().getProjectName(),
+	                app.getStatus().toString(),
+	                app.getWithdrawalStatus() != null ? app.getWithdrawalStatus() : "N/A",
+	                app.getSelectedFlatType() != null ? app.getSelectedFlatType().toString() : "N/A"
+	            ));
+	            writer.newLine();
+	        }
+	        
+	        return true;
+	    } catch (IOException e) {
+	        System.out.println("Error saving applications: " + e.getMessage());
+	        return false;
+	    }
+	}
+
+	public boolean saveEnquiries(List<Enquiry> enquiries) {
+	    try (BufferedWriter writer = new BufferedWriter(new FileWriter(ENQUIRY_FILE))) {
+	        // Write header
+	        writer.write("Applicant NRIC\tProject Name\tEnquiry Content\tResponse\tSubmission Date");
+	        writer.newLine();
+	        
+	        // Write data
+	        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+	        for (Enquiry enquiry : enquiries) {
+	            writer.write(String.format("%s\t%s\t%s\t%s\t%s",
+	                enquiry.getApplicant().getNric(),
+	                enquiry.getProject().getProjectName(),
+	                enquiry.getEnquiryContent(),
+	                enquiry.getResponse() != null ? enquiry.getResponse() : "N/A",
+	                dateFormat.format(enquiry.getSubmissionDate())
+	            ));
+	            writer.newLine();
+	        }
+	        
+	        return true;
+	    } catch (IOException e) {
+	        System.out.println("Error saving enquiries: " + e.getMessage());
+	        return false;
+	    }
+	}
+	
+	public boolean saveOfficerRegistrations(List<OfficerRegistration> registrations) {
+	    try (BufferedWriter writer = new BufferedWriter(new FileWriter(OFFICER_REGISTRATION_FILE))) {
+	        // Write header
+	        writer.write("Officer NRIC\tProject Name\tRegistration Status");
+	        writer.newLine();
+	        
+	        // Write data
+	        for (OfficerRegistration registration : registrations) {
+	            writer.write(String.format("%s\t%s\t%s", 
+	                registration.getHdbOfficer().getNric(),
+	                registration.getProject().getProjectName(),
+	                registration.getRegistrationStatus()
+	            ));
+	            writer.newLine();
+	        }
+	        
+	        return true;
+	    } catch (IOException e) {
+	        System.out.println("Error saving officer registrations: " + e.getMessage());
+	        return false;
+	    }
+	}
+
+	public boolean saveReports(List<Report> reports) {
+	    try (BufferedWriter writer = new BufferedWriter(new FileWriter(REPORT_FILE))) {
+	        // Write header
+	        writer.write("Report Type\tFilter Criteria\tGeneration Date");
+	        writer.newLine();
+	        
+	        // Write data
+	        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+	        for (Report report : reports) {
+	            writer.write(String.format("%s\t%s\t%s", 
+	                report.getReportType(),
+	                report.getFilters().toString(),
+	                dateFormat.format(new Date())  // Using current date
+	            ));
+	            writer.newLine();
+	        }
+	        
+	        return true;
+	    } catch (IOException e) {
+	        System.out.println("Error saving reports: " + e.getMessage());
+	        return false;
+	    }
+	}
+	
+	
+
+	/**
+	 * Saves flat bookings to file
+	 * 
+	 * @param bookings List of bookings to save
+	 * @return true if successful, false otherwise
+	 */
+	public boolean saveBookings(List<FlatBooking> bookings) {
+	    try (BufferedWriter writer = new BufferedWriter(new FileWriter(BOOKING_FILE))) {
+	        // Write header
+	        writer.write("Applicant NRIC\tProject Name\tFlat Type\tFlat ID\tBooking Date\tBooking Status\tRejection Reason");
+	        writer.newLine();
+	        
+	        // Write data
+	        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+	        for (FlatBooking booking : bookings) {
+	            String rejectionReason = booking.getRejectionReason() != null ? booking.getRejectionReason() : "N/A";
+	            
+	            writer.write(String.format("%s\t%s\t%s\t%d\t%s\t%s\t%s",
+	                booking.getApplicant().getNric(),
+	                booking.getProject().getProjectName(),
+	                booking.getFlatType().toString(),
+	                booking.getFlatId(),
+	                dateFormat.format(booking.getBookingDate()),
+	                booking.getBookingStatus(),
+	                rejectionReason
+	            ));
+	            writer.newLine();
+	        }
+	        
+	        return true;
+	    } catch (IOException e) {
+	        System.out.println("Error: Failed to save bookings data. " + e.getMessage());
+	        return false;
+	    }
+	}
+	
  
  // Helper methods
  private MaritalStatus convertToMaritalStatus(String status) {
@@ -493,7 +860,6 @@ public class FileManager {
          // If all else fails, return any manager
          return managerMap.values().iterator().next();
      }
-     
      return manager;
  }
  

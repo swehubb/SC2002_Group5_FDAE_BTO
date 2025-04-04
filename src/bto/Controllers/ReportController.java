@@ -1,6 +1,8 @@
 package bto.Controllers;
 
 import bto.EntitiesProjectRelated.*;
+import java.util.List;
+import java.util.ArrayList;
 
 public class ReportController {
     // Constructor
@@ -38,5 +40,11 @@ public class ReportController {
         
         // Export report to file
         return report.exportToFile(filename);
+    }
+    public List<Report> getAllReports() {
+        // If you're tracking reports in the controller
+        List<Report> reports = new ArrayList<>();
+        // Add logic to return reports, or return an empty list if not tracking
+        return reports;
     }
 }

@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+
 import bto.Controllers.*;
 import bto.Entities.*;
 import bto.EntitiesProjectRelated.*;
@@ -66,62 +67,74 @@ public class ManagerInterface {
             System.out.println("13. Respond to Enquiry");
             System.out.println("14. Change Password");
             System.out.println("0. Logout");
-            System.out.print("Enter your choice: ");
             
-            try {
-                int choice = Integer.parseInt(scanner.nextLine());
+            while (true) {
+                System.out.print("Enter your choice: ");
+                String input = scanner.nextLine().trim();
                 
-                switch (choice) {
-                    case 1:
-                        createProject(manager);
-                        break;
-                    case 2:
-                        editProject(manager);
-                        break;
-                    case 3:
-                        deleteProject(manager);
-                        break;
-                    case 4:
-                        toggleProjectVisibility(manager);
-                        break;
-                    case 5:
-                        viewAllProjects();
-                        break;
-                    case 6:
-                        viewMyProjects(manager);
-                        break;
-                    case 7:
-                        viewOfficerRegistrations(manager);
-                        break;
-                    case 8:
-                        approveRejectOfficerRegistration(manager);
-                        break;
-                    case 9:
-                        approveRejectApplication(manager);
-                        break;
-                    case 10:
-                        approveRejectWithdrawal(manager);
-                        break;
-                    case 11:
-                        generateReport(manager);
-                        break;
-                    case 12:
-                        viewAllEnquiries();
-                        break;
-                    case 13:
-                        respondToEnquiry(manager);
-                        break;
-                    case 14:
-                        changePassword(manager);
-                        break;
-                    case 0:
-                        showMessage("Logging out...");
-                        return;
-                    default:
-                        showMessage("Invalid choice. Please try again.");
+                if (input.isEmpty()) {
+                    System.out.println("Input cannot be empty. Please enter a valid number.");
+                    continue;
                 }
-            } catch (NumberFormatException e) {
-                showMessage("Invalid input. Please enter a number.");
+                
+                try {
+                    int choice = Integer.parseInt(input);
+                    
+                    switch (choice) {
+                        case 1:
+                            createProject(manager);
+                            break;
+                        case 2:
+                            editProject(manager);
+                            break;
+                        case 3:
+                            deleteProject(manager);
+                            break;
+                        case 4:
+                            toggleProjectVisibility(manager);
+                            break;
+                        case 5:
+                            viewAllProjects();
+                            break;
+                        case 6:
+                            viewMyProjects(manager);
+                            break;
+                        case 7:
+                            viewOfficerRegistrations(manager);
+                            break;
+                        case 8:
+                            approveRejectOfficerRegistration(manager);
+                            break;
+                        case 9:
+                            approveRejectApplication(manager);
+                            break;
+                        case 10:
+                            approveRejectWithdrawal(manager);
+                            break;
+                        case 11:
+                            generateReport(manager);
+                            break;
+                        case 12:
+                            viewAllEnquiries();
+                            break;
+                        case 13:
+                            respondToEnquiry(manager);
+                            break;
+                        case 14:
+                            changePassword(manager);
+                            break;
+                        case 0:
+                            showMessage("Logging out...");
+                            userInterface.displayLoginMenu();
+                            return;
+                        default:
+                            showMessage("Invalid choice. Please try again.");
+                            continue;
+                    }
+                    break; // Exit the loop if a valid choice was processed
+                } catch (NumberFormatException e) {
+                    showMessage("Invalid input. Please enter a number.");
+                }
             }
         }
     }
@@ -140,8 +153,8 @@ public class ManagerInterface {
         Map<FlatType, Integer> flatTypeUnits = new HashMap<>();
         
         // Get flat type units
-        int twoRoomUnits = Integer.parseInt(getInput("Enter number of 2-Room units: "));
-        int threeRoomUnits = Integer.parseInt(getInput("Enter number of 3-Room units: "));
+        int twoRoomUnits = getIntegerInput("Enter number of 2-Room units: ", 0);
+        int threeRoomUnits = getIntegerInput("Enter number of 3-Room units: ", 0);
         
         // Add to map
         flatTypeUnits.put(FlatType.TWO_ROOM, twoRoomUnits);
@@ -168,11 +181,7 @@ public class ManagerInterface {
         project.setApplicationCloseDate(closeDate);
         
         // Get HDB Officer slots
-        int officerSlots = Integer.parseInt(getInput("Enter number of HDB Officer slots (max 10): "));
-        if (officerSlots > 10) {
-            officerSlots = 10;
-            showMessage("Maximum number of HDB Officer slots is 10. Setting to 10.");
-        }
+        int officerSlots = getIntegerInput("Enter number of HDB Officer slots (max 10): ", 1, 10);
         
         // Set officer slots
         project.setAvailableHDBOfficerSlots(officerSlots);
@@ -213,9 +222,9 @@ public class ManagerInterface {
         }
         
         // Get user selection
-        int selection = Integer.parseInt(getInput("Select a project to edit (0 to cancel): "));
+        int selection = getIntegerInput("Select a project to edit (0 to cancel): ", 0, managerProjects.size());
         
-        if (selection == 0 || selection > managerProjects.size()) {
+        if (selection == 0) {
             showMessage("Operation cancelled.");
             return;
         }
@@ -232,7 +241,7 @@ public class ManagerInterface {
         System.out.println("6. HDB Officer Slots");
         System.out.println("0. Cancel");
         
-        int editOption = Integer.parseInt(getInput("Select what to edit: "));
+        int editOption = getIntegerInput("Select what to edit: ", 0, 6);
         
         if (editOption == 0) {
             showMessage("Operation cancelled.");
@@ -309,19 +318,37 @@ public class ManagerInterface {
                 int currentTwoRoomUnits = currentUnits.getOrDefault(FlatType.TWO_ROOM, 0);
                 int currentThreeRoomUnits = currentUnits.getOrDefault(FlatType.THREE_ROOM, 0);
                 
-                String newTwoRoomUnits = getInput("Enter new number of 2-Room units [" + currentTwoRoomUnits + "]: ");
-                String newThreeRoomUnits = getInput("Enter new number of 3-Room units [" + currentThreeRoomUnits + "]: ");
+                String newTwoRoomUnitsStr = getInput("Enter new number of 2-Room units [" + currentTwoRoomUnits + "]: ");
+                String newThreeRoomUnitsStr = getInput("Enter new number of 3-Room units [" + currentThreeRoomUnits + "]: ");
                 
                 // Create updated map if either input is non-empty
-                if (!newTwoRoomUnits.trim().isEmpty() || !newThreeRoomUnits.trim().isEmpty()) {
+                if (!newTwoRoomUnitsStr.trim().isEmpty() || !newThreeRoomUnitsStr.trim().isEmpty()) {
                     Map<FlatType, Integer> newUnits = new HashMap<>(currentUnits);
                     
-                    if (!newTwoRoomUnits.trim().isEmpty()) {
-                        newUnits.put(FlatType.TWO_ROOM, Integer.parseInt(newTwoRoomUnits));
+                    if (!newTwoRoomUnitsStr.trim().isEmpty()) {
+                        try {
+                            int newTwoRoomUnits = Integer.parseInt(newTwoRoomUnitsStr);
+                            if (newTwoRoomUnits < 0) {
+                                showMessage("Number of units cannot be negative. Using current value.");
+                            } else {
+                                newUnits.put(FlatType.TWO_ROOM, newTwoRoomUnits);
+                            }
+                        } catch (NumberFormatException e) {
+                            showMessage("Invalid input for 2-Room units. Using current value.");
+                        }
                     }
                     
-                    if (!newThreeRoomUnits.trim().isEmpty()) {
-                        newUnits.put(FlatType.THREE_ROOM, Integer.parseInt(newThreeRoomUnits));
+                    if (!newThreeRoomUnitsStr.trim().isEmpty()) {
+                        try {
+                            int newThreeRoomUnits = Integer.parseInt(newThreeRoomUnitsStr);
+                            if (newThreeRoomUnits < 0) {
+                                showMessage("Number of units cannot be negative. Using current value.");
+                            } else {
+                                newUnits.put(FlatType.THREE_ROOM, newThreeRoomUnits);
+                            }
+                        } catch (NumberFormatException e) {
+                            showMessage("Invalid input for 3-Room units. Using current value.");
+                        }
                     }
                     
                     if (manager.editProject(selectedProject, "flattypeunits", newUnits)) {
@@ -334,20 +361,12 @@ public class ManagerInterface {
                 
             case 6:
                 int currentSlots = selectedProject.getAvailableHDBOfficerSlots();
-                String newSlots = getInput("Enter new number of HDB Officer slots (max 10) [" + currentSlots + "]: ");
+                int newSlots = getIntegerInput("Enter new number of HDB Officer slots (max 10) [" + currentSlots + "]: ", 1, 10);
                 
-                if (!newSlots.trim().isEmpty()) {
-                    int slots = Integer.parseInt(newSlots);
-                    if (slots > 10) {
-                        slots = 10;
-                        showMessage("Maximum number of HDB Officer slots is 10. Setting to 10.");
-                    }
-                    
-                    if (manager.editProject(selectedProject, "availablehdbofficerunits", slots)) {
-                        showMessage("HDB Officer slots updated successfully!");
-                    } else {
-                        showMessage("Failed to update HDB Officer slots.");
-                    }
+                if (manager.editProject(selectedProject, "availablehdbofficerunits", newSlots)) {
+                    showMessage("HDB Officer slots updated successfully!");
+                } else {
+                    showMessage("Failed to update HDB Officer slots.");
                 }
                 break;
                 
@@ -406,9 +425,9 @@ public class ManagerInterface {
         }
         
         // Get user selection
-        int selection = Integer.parseInt(getInput("Select a project to delete (0 to cancel): "));
+        int selection = getIntegerInput("Select a project to delete (0 to cancel): ", 0, managerProjects.size());
         
-        if (selection == 0 || selection > managerProjects.size()) {
+        if (selection == 0) {
             showMessage("Operation cancelled.");
             return;
         }
@@ -457,9 +476,9 @@ public class ManagerInterface {
         }
         
         // Get user selection
-        int selection = Integer.parseInt(getInput("Select a project to toggle visibility (0 to cancel): "));
+        int selection = getIntegerInput("Select a project to toggle visibility (0 to cancel): ", 0, managerProjects.size());
         
-        if (selection == 0 || selection > managerProjects.size()) {
+        if (selection == 0) {
             showMessage("Operation cancelled.");
             return;
         }
@@ -643,9 +662,9 @@ public class ManagerInterface {
         }
         
         // Get user selection
-        int selection = Integer.parseInt(getInput("Select a registration to process (0 to cancel): "));
+        int selection = getIntegerInput("Select a registration to process (0 to cancel): ", 0, pendingRegistrations.size());
         
-        if (selection == 0 || selection > pendingRegistrations.size()) {
+        if (selection == 0) {
             showMessage("Operation cancelled.");
             return;
         }
@@ -655,7 +674,7 @@ public class ManagerInterface {
         // Approve or reject
         System.out.println("1. Approve");
         System.out.println("2. Reject");
-        int actionChoice = Integer.parseInt(getInput("Enter your choice: "));
+        int actionChoice = getIntegerInput("Enter your choice: ", 1, 2);
         
         if (actionChoice == 1) {
             if (manager.approveRegistration(selectedRegistration)) {
@@ -672,8 +691,6 @@ public class ManagerInterface {
             } else {
                 showMessage("Failed to reject registration.");
             }
-        } else {
-            showMessage("Invalid choice. Operation cancelled.");
         }
     }
     
@@ -706,9 +723,9 @@ public class ManagerInterface {
         }
         
         // Get user selection
-        int selection = Integer.parseInt(getInput("Select an application to process (0 to cancel): "));
+        int selection = getIntegerInput("Select an application to process (0 to cancel): ", 0, pendingApplications.size());
         
-        if (selection == 0 || selection > pendingApplications.size()) {
+        if (selection == 0) {
             showMessage("Operation cancelled.");
             return;
         }
@@ -718,7 +735,7 @@ public class ManagerInterface {
         // Approve or reject
         System.out.println("1. Approve");
         System.out.println("2. Reject");
-        int actionChoice = Integer.parseInt(getInput("Enter your choice: "));
+        int actionChoice = getIntegerInput("Enter your choice: ", 1, 2);
         
         if (actionChoice == 1) {
             if (manager.approveApplication(selectedApplication)) {
@@ -732,8 +749,6 @@ public class ManagerInterface {
             } else {
                 showMessage("Failed to reject application.");
             }
-        } else {
-            showMessage("Invalid choice. Operation cancelled.");
         }
     }
     
@@ -767,9 +782,9 @@ public class ManagerInterface {
         }
         
         // Get user selection
-        int selection = Integer.parseInt(getInput("Select a withdrawal to process (0 to cancel): "));
+        int selection = getIntegerInput("Select a withdrawal to process (0 to cancel): ", 0, pendingWithdrawals.size());
         
-        if (selection == 0 || selection > pendingWithdrawals.size()) {
+        if (selection == 0) {
             showMessage("Operation cancelled.");
             return;
         }
@@ -779,7 +794,7 @@ public class ManagerInterface {
         // Approve or reject
         System.out.println("1. Approve");
         System.out.println("2. Reject");
-        int actionChoice = Integer.parseInt(getInput("Enter your choice: "));
+        int actionChoice = getIntegerInput("Enter your choice: ", 1, 2);
         
         if (actionChoice == 1) {
             if (manager.approveWithdrawal(selectedWithdrawal)) {
@@ -793,8 +808,6 @@ public class ManagerInterface {
             } else {
                 showMessage("Failed to reject withdrawal.");
             }
-        } else {
-            showMessage("Invalid choice. Operation cancelled.");
         }
     }
     
@@ -810,7 +823,7 @@ public class ManagerInterface {
         System.out.println("5. Applicants by Project");
         System.out.println("6. Applicants by Age Range");
         
-        int filterChoice = Integer.parseInt(getInput("Enter your choice: "));
+        int filterChoice = getIntegerInput("Enter your choice: ", 1, 6);
         
         // Create filter criteria
         FilterCriteria criteria = new FilterCriteria();
@@ -829,14 +842,12 @@ public class ManagerInterface {
                 System.out.println("Select Flat Type:");
                 System.out.println("1. 2-Room");
                 System.out.println("2. 3-Room");
-                int flatTypeChoice = Integer.parseInt(getInput("Enter your choice: "));
+                int flatTypeChoice = getIntegerInput("Enter your choice: ", 1, 2);
                 
                 if (flatTypeChoice == 1) {
                     criteria.addCriteria("flatType", FlatType.TWO_ROOM);
                 } else if (flatTypeChoice == 2) {
                     criteria.addCriteria("flatType", FlatType.THREE_ROOM);
-                } else {
-                    showMessage("Invalid choice. Generating report for all flat types.");
                 }
                 break;
             case 5:
@@ -854,9 +865,9 @@ public class ManagerInterface {
                         System.out.println((i+1) + ". " + project.getProjectName());
                     }
                     
-                    int projectChoice = Integer.parseInt(getInput("Select a project (0 for all): "));
+                    int projectChoice = getIntegerInput("Select a project (0 for all): ", 0, managerProjects.size());
                     
-                    if (projectChoice > 0 && projectChoice <= managerProjects.size()) {
+                    if (projectChoice > 0) {
                         criteria.addCriteria("project", managerProjects.get(projectChoice - 1));
                     } else {
                         showMessage("Generating report for all projects.");
@@ -864,14 +875,12 @@ public class ManagerInterface {
                 }
                 break;
             case 6:
-                int minAge = Integer.parseInt(getInput("Enter minimum age: "));
-                int maxAge = Integer.parseInt(getInput("Enter maximum age: "));
+                int minAge = getIntegerInput("Enter minimum age: ", 0);
+                int maxAge = getIntegerInput("Enter maximum age: ", minAge);
                 
                 criteria.addCriteria("minAge", minAge);
                 criteria.addCriteria("maxAge", maxAge);
                 break;
-            default:
-                showMessage("Invalid choice. Generating report for all applicants.");
         }
         
         // Generate the report
@@ -958,9 +967,9 @@ public class ManagerInterface {
         }
         
         // Get user selection
-        int selection = Integer.parseInt(getInput("Select an enquiry to respond to (0 to cancel): "));
+        int selection = getIntegerInput("Select an enquiry to respond to (0 to cancel): ", 0, pendingEnquiries.size());
         
-        if (selection == 0 || selection > pendingEnquiries.size()) {
+        if (selection == 0) {
             showMessage("Operation cancelled.");
             return;
         }
@@ -1020,6 +1029,58 @@ public class ManagerInterface {
         // Update password
         manager.setPassword(newPassword);
         showMessage("Password changed successfully!");
+    }
+    
+    // Helper method for getting integer input with validation
+    private int getIntegerInput(String prompt, int min, int max) {
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine().trim();
+            
+            if (input.isEmpty()) {
+                System.out.println("Input cannot be empty. Please enter a valid number.");
+                continue;
+            }
+            
+            try {
+                int value = Integer.parseInt(input);
+                
+                if (value < min || value > max) {
+                    System.out.println("Please enter a number between " + min + " and " + max);
+                    continue;
+                }
+                
+                return value;
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a number.");
+            }
+        }
+    }
+    
+    // Helper method for getting integer input with only minimum bound
+    private int getIntegerInput(String prompt, int min) {
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine().trim();
+            
+            if (input.isEmpty()) {
+                System.out.println("Input cannot be empty. Please enter a valid number.");
+                continue;
+            }
+            
+            try {
+                int value = Integer.parseInt(input);
+                
+                if (value < min) {
+                    System.out.println("Please enter a number of at least " + min);
+                    continue;
+                }
+                
+                return value;
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a number.");
+            }
+        }
     }
     
     public void showMessage(String message) {

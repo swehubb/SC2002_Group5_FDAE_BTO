@@ -1,0 +1,2 @@
+Officer NRIC	Project Name	Registration Status
+T1234567J	Test Project 1	APPROVED

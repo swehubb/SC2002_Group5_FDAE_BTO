@@ -58,6 +58,58 @@ public class OfficerInterface {
         return this.currentOfficer;
     }
     
+    // Helper method for getting integer input with validation
+    private int getValidIntegerInput(String prompt, int min, int max) {
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine().trim();
+            
+            if (input.isEmpty()) {
+                System.out.println("Input cannot be empty. Please enter a valid number.");
+                continue;
+            }
+            
+            try {
+                int value = Integer.parseInt(input);
+                
+                if (value < min || value > max) {
+                    System.out.println("Please enter a number between " + min + " and " + max);
+                    continue;
+                }
+                
+                return value;
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a number.");
+            }
+        }
+    }
+    
+    // Helper method for getting integer input with only minimum bound
+    private int getValidIntegerInput(String prompt, int min) {
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine().trim();
+            
+            if (input.isEmpty()) {
+                System.out.println("Input cannot be empty. Please enter a valid number.");
+                continue;
+            }
+            
+            try {
+                int value = Integer.parseInt(input);
+                
+                if (value < min) {
+                    System.out.println("Please enter a number of at least " + min);
+                    continue;
+                }
+                
+                return value;
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a number.");
+            }
+        }
+    }
+    
     public void displayOfficerMenu(HDBOfficer officer) {
     	
     	setCurrentOfficer(officer);
@@ -88,9 +140,8 @@ public class OfficerInterface {
         System.out.println("15. Display Profile");
         System.out.println("16. Change Password");
         System.out.println("0. Logout");
-        System.out.print("Enter your choice: ");
         
-        int choice = Integer.parseInt(scanner.nextLine());
+        int choice = getValidIntegerInput("Enter your choice: ", 0, 16);
         
         // Implementation for each menu option would go here
         switch (choice) {
@@ -214,24 +265,12 @@ public class OfficerInterface {
         System.out.println("1. View Project Details");
         System.out.println("0. Back to Main Menu");
         
-        System.out.print("\nEnter your choice: ");
-        int choice = Integer.parseInt(scanner.nextLine());
+        int choice = getValidIntegerInput("\nEnter your choice: ", 0, 1);
         
         switch (choice) {
             case 1:
-                System.out.print("Enter project ID to view details: ");
-                try {
-                    int projectId = Integer.parseInt(scanner.nextLine());
-                    
-                    if (projectId < 1 || projectId > allProjects.size()) {
-                        System.out.println("Invalid project ID.");
-                    } else {
-                        // Display project details
-                        viewProjectDetails(allProjects.get(projectId - 1), officer);
-                    }
-                } catch (NumberFormatException e) {
-                    System.out.println("Invalid input. Please enter a number.");
-                }
+                int projectId = getValidIntegerInput("Enter project ID to view details: ", 1, allProjects.size());
+                viewProjectDetails(allProjects.get(projectId - 1), officer);
                 
                 // After viewing details, return to project list
                 viewAllProjects(officer);
@@ -287,6 +326,7 @@ public class OfficerInterface {
 	    int pendingCount = 0;
 	    int successfulCount = 0;
 	    int unsuccessfulCount = 0;
+	    int bookedCount = 0;
 	    
 	    for (ProjectApplication app : applications) {
 	        switch (app.getStatus()) {
@@ -299,12 +339,15 @@ public class OfficerInterface {
 	            case UNSUCCESSFUL:
 	                unsuccessfulCount++;
 	                break;
+	            case BOOKED:
+	            	bookedCount++;
 	        }
 	    }
 	    
 	    System.out.println("Pending: " + pendingCount);
 	    System.out.println("Successful: " + successfulCount);
 	    System.out.println("Unsuccessful: " + unsuccessfulCount);
+	    System.out.println("Booked: " + bookedCount);
 	    
 	    // Display officer's status with this project
 	    boolean isAssigned = officer.getAssignedProjects().contains(project);
@@ -394,32 +437,24 @@ public class OfficerInterface {
 	    	    );
 	    	}
 	        
-	        System.out.print("\nEnter project ID to register (or 0 to cancel): ");
-	        try {
-	            int projectId = Integer.parseInt(scanner.nextLine());
+	        int projectId = getValidIntegerInput("\nEnter project ID to register (or 0 to cancel): ", 0, availableProjects.size());
+	        
+	        if (projectId > 0) {
+	            Project selectedProject = availableProjects.get(projectId - 1);
 	            
-	            if (projectId == 0) {
-	                // Cancel operation
-	            } else if (projectId < 1 || projectId > availableProjects.size()) {
-	                System.out.println("Invalid project ID.");
+	            // Register officer for the project using RegistrationController
+	            OfficerRegistration registration = registrationController.registerOfficer(officer, selectedProject);
+	            
+	            if (registration != null) {
+	                System.out.println("\nSubmitting registration request for " + selectedProject.getProjectName() + "...");
+	                System.out.println("Registration request submitted successfully!");
+	                System.out.println("Status: " + registration.getRegistrationStatus() + " (Awaiting manager approval)");
 	            } else {
-	                Project selectedProject = availableProjects.get(projectId - 1);
-	                
-	                // Register officer for the project using RegistrationController
-	                OfficerRegistration registration = registrationController.registerOfficer(officer, selectedProject);
-	                
-	                if (registration != null) {
-	                    System.out.println("\nSubmitting registration request for " + selectedProject.getProjectName() + "...");
-	                    System.out.println("Registration request submitted successfully!");
-	                    System.out.println("Status: " + registration.getRegistrationStatus() + " (Awaiting manager approval)");
-	                } else {
-	                    System.out.println("Failed to register for project. No slots available.");
-	                }
+	                System.out.println("Failed to register for project. No slots available.");
 	            }
-	        } catch (NumberFormatException e) {
-	            System.out.println("Invalid input. Please enter a number.");
 	        }
 	    }
+	    BTOManagementSystem.saveData();
 	    
 	    // Wait for user input before returning to menu
 	    System.out.println("\nPress Enter to return to the main menu...");
@@ -514,8 +549,7 @@ public class OfficerInterface {
 	    System.out.println("1. View Assigned Project Details");
 	    System.out.println("0. Back to Main Menu");
 	    
-	    System.out.print("\nEnter your choice: ");
-	    int choice = Integer.parseInt(scanner.nextLine());
+	    int choice = getValidIntegerInput("\nEnter your choice: ", 0, 1);
 	    
 	    switch (choice) {
 	        case 1:
@@ -530,18 +564,11 @@ public class OfficerInterface {
 	                    System.out.printf("%d. %s%n", i + 1, assignedProjects.get(i).getProjectName());
 	                }
 	                
-	                System.out.print("\nEnter project number (or 0 to cancel): ");
-	                try {
-	                    int projectChoice = Integer.parseInt(scanner.nextLine());
-	                    
-	                    if (projectChoice > 0 && projectChoice <= assignedProjects.size()) {
-	                        Project selectedProject = assignedProjects.get(projectChoice - 1);
-	                        viewProjectDetails(selectedProject, officer);
-	                    } else if (projectChoice != 0) {
-	                        System.out.println("Invalid project number.");
-	                    }
-	                } catch (NumberFormatException e) {
-	                    System.out.println("Invalid input. Please enter a number.");
+	                int projectChoice = getValidIntegerInput("\nEnter project number (or 0 to cancel): ", 0, assignedProjects.size());
+	                
+	                if (projectChoice > 0) {
+	                    Project selectedProject = assignedProjects.get(projectChoice - 1);
+	                    viewProjectDetails(selectedProject, officer);
 	                }
 	            }
 	            break;
@@ -570,8 +597,7 @@ public class OfficerInterface {
 	        System.out.println("2. View Approved Flat Bookings");
 	        System.out.println("0. Back to Main Menu");
 	        
-	        System.out.print("\nEnter your choice: ");
-	        int choice = Integer.parseInt(scanner.nextLine());
+	        int choice = getValidIntegerInput("\nEnter your choice: ", 0, 2);
 	        
 	        switch (choice) {
 	            case 1:
@@ -636,24 +662,18 @@ public class OfficerInterface {
 	    	        requestedType.toString()
 	    	    );
 	    	}
-        }
 	        
-	        System.out.print("\nEnter booking request ID to process (or 0 to cancel): ");
-	        try {
-	            int requestId = Integer.parseInt(scanner.nextLine());
-	            
-	            if (requestId > 0 && requestId <= pendingBookingRequests.size()) {
-	                processBookingRequest(pendingBookingRequests.get(requestId - 1), officer);
-	            } else if (requestId != 0) {
-	                System.out.println("Invalid booking request ID.");
-	            }
-	        } catch (NumberFormatException e) {
-	            System.out.println("Invalid input. Please enter a number.");
+	        int requestId = getValidIntegerInput("\nEnter booking request ID to process (or 0 to cancel): ", 0, pendingBookingRequests.size());
+	        
+	        if (requestId > 0) {
+	            processBookingRequest(pendingBookingRequests.get(requestId - 1), officer);
 	        }
+        }
 	    
 	    // Wait for user input before returning
 	    System.out.println("\nPress Enter to continue...");
 	    scanner.nextLine();
+	    
 	}
 
 	private void processBookingRequest(ProjectApplication application, HDBOfficer officer) {
@@ -685,20 +705,34 @@ public class OfficerInterface {
 	    System.out.println("2. Reject Booking Request");
 	    System.out.println("0. Back");
 	    
-	    System.out.print("\nEnter your choice: ");
-	    int choice = Integer.parseInt(scanner.nextLine());
+	    int choice = getValidIntegerInput("\nEnter your choice: ", 0, 2);
 	    
 	    switch (choice) {
 	        case 1:
 	            if (availableUnits <= 0) {
 	                System.out.println("Cannot approve booking - no units available of the requested type.");
+	                
+	                // Auto-reject the booking due to no available units
+	                String autoRejectionReason = "No available units of type " + requestedType.toString() + " in project " + project.getProjectName();
+	                boolean rejectionResult = bookingController.rejectBooking(application, autoRejectionReason);
+	                
+	                if (rejectionResult) {
+	                    System.out.println("Booking has been automatically rejected due to lack of available units.");
+	                    // Reset the flat type selection to allow the applicant to choose another type
+	                    application.setSelectedFlatType(null);
+	                    System.out.println("The applicant will be notified and may select a different flat type.");
+	                } else {
+	                    System.out.println("Failed to record booking rejection. Please try again or reject manually.");
+	                }
 	            } else {
 	                // Book a flat of the requested type
 	                int flatId = project.bookFlat(requestedType);
 	                
 	                if (flatId != -1) {
-	                    // Create a booking record
+	                    // Create a booking record with APPROVED status
 	                    FlatBooking booking = new FlatBooking(applicant, project, requestedType, flatId);
+	                    booking.setBookingStatus(FlatBooking.STATUS_APPROVED); // Explicitly set status to approved
+	                    
 	                    boolean bookingCreated = bookingController.createBooking(booking);
 	                    
 	                    if (bookingCreated) {
@@ -712,6 +746,17 @@ public class OfficerInterface {
 	                    }
 	                } else {
 	                    System.out.println("Failed to book flat. No units available.");
+	                    
+	                    // Auto-reject in case bookFlat failed
+	                    String autoRejectionReason = "Unable to allocate a flat unit of type " + requestedType.toString();
+	                    boolean rejectionResult = bookingController.rejectBooking(application, autoRejectionReason);
+	                    
+	                    if (rejectionResult) {
+	                        System.out.println("Booking has been automatically rejected due to allocation failure.");
+	                        // Reset the flat type selection to allow the applicant to choose another type
+	                        application.setSelectedFlatType(null);
+	                        System.out.println("The applicant will be notified and may select a different flat type.");
+	                    }
 	                }
 	            }
 	            break;
@@ -732,6 +777,9 @@ public class OfficerInterface {
 	                System.out.println("Failed to reject booking request. Please try again.");
 	            }
 	            break;
+	            
+	        case 0:
+	            return;
 	    }
 	}
 
@@ -772,20 +820,13 @@ public class OfficerInterface {
 	    	        dateFormat.format(booking.getBookingDate())
 	    	    );
 	    	}
-	        }
 	        
-	        System.out.print("\nEnter booking ID to view details (or 0 to cancel): ");
-	        try {
-	            int bookingId = Integer.parseInt(scanner.nextLine());
-	            
-	            if (bookingId > 0 && bookingId <= approvedBookings.size()) {
-	                viewBookingDetails(approvedBookings.get(bookingId - 1));
-	            } else if (bookingId != 0) {
-	                System.out.println("Invalid booking ID.");
-	            }
-	        } catch (NumberFormatException e) {
-	            System.out.println("Invalid input. Please enter a number.");
+	        int bookingId = getValidIntegerInput("\nEnter booking ID to view details (or 0 to cancel): ", 0, approvedBookings.size());
+	        
+	        if (bookingId > 0) {
+	            viewBookingDetails(approvedBookings.get(bookingId - 1));
 	        }
+        }
 	    
 	    // Wait for user input before returning
 	    System.out.println("\nPress Enter to continue...");
@@ -801,8 +842,7 @@ public class OfficerInterface {
 	    System.out.println("1. Print Receipt");
 	    System.out.println("0. Back");
 	    
-	    System.out.print("\nEnter your choice: ");
-	    int choice = Integer.parseInt(scanner.nextLine());
+	    int choice = getValidIntegerInput("\nEnter your choice: ", 0, 1);
 	    
 	    if (choice == 1) {
 	        String receipt = receiptGenerator.generateReceipt(booking);
@@ -878,62 +918,40 @@ public class OfficerInterface {
 	        System.out.println("2. Apply for Project");
 	        System.out.println("0. Back to Main Menu");
 	        
-	        System.out.print("\nEnter your choice: ");
-	        int choice = Integer.parseInt(scanner.nextLine());
+	        int choice = getValidIntegerInput("\nEnter your choice: ", 0, 2);
 	        
 	        switch (choice) {
 	            case 1:
-	                System.out.print("Enter project ID to view details: ");
-	                try {
-	                    int projectId = Integer.parseInt(scanner.nextLine());
-	                    
-	                    if (projectId < 1 || projectId > visibleProjects.size()) {
-	                        System.out.println("Invalid project ID.");
-	                    } else {
-	                        // View project details as applicant
-	                        viewProjectDetailsAsApplicant(visibleProjects.get(projectId - 1), officer);
-	                    }
-	                } catch (NumberFormatException e) {
-	                    System.out.println("Invalid input. Please enter a number.");
-	                }
+	                int projectId = getValidIntegerInput("Enter project ID to view details: ", 1, visibleProjects.size());
+	                viewProjectDetailsAsApplicant(visibleProjects.get(projectId - 1), officer);
 	                browseProjects(officer);
 	                break;
 	                
 	            case 2:
-	                System.out.print("Enter project ID to apply: ");
-	                try {
-	                    int projectId = Integer.parseInt(scanner.nextLine());
-	                    
-	                    if (projectId < 1 || projectId > visibleProjects.size()) {
-	                        System.out.println("Invalid project ID.");
-	                    } else {
-	                        Project selectedProject = visibleProjects.get(projectId - 1);
-	                        
-	                        // Check constraints before allowing application
-	                        if (officer.getAssignedProjects().contains(selectedProject)) {
-	                            System.out.println("\nERROR: You cannot apply for a project you are assigned to as an officer.");
-	                            System.out.println("This would create a conflict of interest.");
-	                        } else {
-	                            // Check for date overlaps
-	                            boolean hasDateOverlap = false;
-	                            for (Project assignedProject : officer.getAssignedProjects()) {
-	                                if (datesOverlap(assignedProject, selectedProject)) {
-	                                    hasDateOverlap = true;
-	                                    break;
-	                                }
-	                            }
-	                            
-	                            if (hasDateOverlap) {
-	                                System.out.println("\nERROR: You cannot apply for a project that overlaps with your assigned project dates.");
-	                                System.out.println("Please select a project with non-overlapping dates.");
-	                            } else {
-	                                // Apply for project
-	                                applyForProject(selectedProject, officer);
-	                            }
+	                int applyProjectId = getValidIntegerInput("Enter project ID to apply: ", 1, visibleProjects.size());
+	                Project selectedProject = visibleProjects.get(applyProjectId - 1);
+	                
+	                // Check constraints before allowing application
+	                if (officer.getAssignedProjects().contains(selectedProject)) {
+	                    System.out.println("\nERROR: You cannot apply for a project you are assigned to as an officer.");
+	                    System.out.println("This would create a conflict of interest.");
+	                } else {
+	                    // Check for date overlaps
+	                    boolean hasDateOverlap = false;
+	                    for (Project assignedProject : officer.getAssignedProjects()) {
+	                        if (datesOverlap(assignedProject, selectedProject)) {
+	                            hasDateOverlap = true;
+	                            break;
 	                        }
 	                    }
-	                } catch (NumberFormatException e) {
-	                    System.out.println("Invalid input. Please enter a number.");
+	                    
+	                    if (hasDateOverlap) {
+	                        System.out.println("\nERROR: You cannot apply for a project that overlaps with your assigned project dates.");
+	                        System.out.println("Please select a project with non-overlapping dates.");
+	                    } else {
+	                        // Apply for project
+	                        applyForProject(selectedProject, officer);
+	                    }
 	                }
 	                browseProjects(officer);
 	                break;
@@ -1024,8 +1042,7 @@ public class OfficerInterface {
 	    System.out.println("1. Yes");
 	    System.out.println("0. No (Cancel)");
 	    
-	    System.out.print("\nEnter your choice: ");
-	    int choice = Integer.parseInt(scanner.nextLine());
+	    int choice = getValidIntegerInput("\nEnter your choice: ", 0, 1);
 	    
 	    if (choice == 1) {
 	        // Submit application
@@ -1087,33 +1104,30 @@ public class OfficerInterface {
 	        // Show options based on application status
 	        System.out.println("\nOptions:");
 	        
+	        int maxChoice = 0;
+	        
 	        if (application.getStatus() == ApplicationStatus.SUCCESSFUL && selectedFlatType == null) {
 	            // For successful applications with no flat type selected yet, show option to select flat type
 	            System.out.println("1. Select Flat Type");
+	            maxChoice = 1;
 	        } else if (application.getStatus() == ApplicationStatus.BOOKED) {
 	            // For booked applications, show option to view receipt
 	            System.out.println("1. View Booking Receipt");
+	            maxChoice = 1;
 	        }
 	        
 	        System.out.println("0. Back to Main Menu");
 	        
-	        System.out.print("\nEnter your choice: ");
-	        try {
-	            int choice = Integer.parseInt(scanner.nextLine());
-	            
-	            if (choice == 1) {
-	                if (application.getStatus() == ApplicationStatus.SUCCESSFUL && selectedFlatType == null) {
-	                    // Select flat type
-	                    selectFlatType(application, project, officer);
-	                } else if (application.getStatus() == ApplicationStatus.BOOKED) {
-	                    // View booking receipt
-	                    viewBookingReceipt(officer.getApplicantRole());
-	                }
-	            } else if (choice != 0) {
-	                System.out.println("Invalid choice.");
+	        int choice = getValidIntegerInput("\nEnter your choice: ", 0, maxChoice);
+	        
+	        if (choice == 1) {
+	            if (application.getStatus() == ApplicationStatus.SUCCESSFUL && selectedFlatType == null) {
+	                // Select flat type
+	                selectFlatType(application, project, officer);
+	            } else if (application.getStatus() == ApplicationStatus.BOOKED) {
+	                // View booking receipt
+	                viewBookingReceipt(officer.getApplicantRole());
 	            }
-	        } catch (NumberFormatException e) {
-	            System.out.println("Invalid input. Please enter a number.");
 	        }
 	    }
 	    
@@ -1161,29 +1175,18 @@ public class OfficerInterface {
 	            System.out.println("1. Select a Flat Type");
 	            System.out.println("0. Cancel");
 	            
-	            System.out.print("\nEnter your choice: ");
-	            try {
-	                int choice = Integer.parseInt(scanner.nextLine());
+	            int choice = getValidIntegerInput("\nEnter your choice: ", 0, 1);
+	            
+	            if (choice == 1) {
+	                int flatTypeId = getValidIntegerInput("Enter the ID of the flat type you want to select: ", 1, availableTypes.size());
+	                FlatType selectedType = availableTypes.get(flatTypeId - 1);
 	                
-	                if (choice == 1) {
-	                    System.out.print("Enter the ID of the flat type you want to select: ");
-	                    int flatTypeId = Integer.parseInt(scanner.nextLine());
-	                    
-	                    if (flatTypeId < 1 || flatTypeId > availableTypes.size()) {
-	                        System.out.println("Invalid flat type ID.");
-	                    } else {
-	                        FlatType selectedType = availableTypes.get(flatTypeId - 1);
-	                        
-	                        // Update the application with the selected flat type
-	                        application.setSelectedFlatType(selectedType);
-	                        
-	                        System.out.println("\nFlat type " + selectedType.toString() + " has been selected.");
-	                        System.out.println("Your selection has been submitted and is pending officer approval.");
-	                        System.out.println("You will be notified once your booking is confirmed.");
-	                    }
-	                }
-	            } catch (NumberFormatException e) {
-	                System.out.println("Invalid input. Please enter a number.");
+	                // Update the application with the selected flat type
+	                application.setSelectedFlatType(selectedType);
+	                
+	                System.out.println("\nFlat type " + selectedType.toString() + " has been selected.");
+	                System.out.println("Your selection has been submitted and is pending officer approval.");
+	                System.out.println("You will be notified once your booking is confirmed.");
 	            }
 	        }
 	    }
@@ -1334,7 +1337,5 @@ public class OfficerInterface {
             scanner.nextLine();
             displayOfficerMenu(currentOfficer);
         }
-        
-        
     }
-	}
+}
