@@ -523,16 +523,12 @@ public class ApplicantInterface {
 private void generateReceiptInterface() {
     System.out.println("\n=== GENERATE RECEIPT ===");
     
-    // Check if the applicant has a booking or successful application
-    if (currentApplicant.getBookedFlat() != null || 
-        (currentApplicant.getAppliedProject() != null && 
-         currentApplicant.getAppliedProject().getStatus() == ApplicationStatus.BOOKED)) {
-        
-        // Generate and display the receipt
-        String receipt = currentApplicant.generateReceipt();
+    ProjectApplication application = applicationController.getApplicationByApplicantNRIC(currentApplicant.getNric());
+    
+    if (application != null && application.getStatus() == ApplicationStatus.BOOKED) {
+        // Generate receipt using the BookingController
+        String receipt = currentApplicant.generateReceipt(bookingController);
         System.out.println(receipt);
-        
-        // Offer to save to file option (if implemented)
         System.out.println("\nNote: To save this receipt, you can copy and paste the text above.");
     } else {
         System.out.println("You do not have any confirmed flat bookings.");
@@ -546,7 +542,6 @@ private void generateReceiptInterface() {
     // Return to the applicant menu
     displayApplicantMenu(currentApplicant);
 }
-
 // Update the viewBookingReceipt method to use applicant.generateReceipt()
 private void viewBookingReceipt(Applicant applicant) {
     System.out.println("\n======== BOOKING RECEIPT ========");
