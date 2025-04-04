@@ -74,6 +74,7 @@ public class ApplicantInterface {
                 System.out.println("7. Request Withdrawal");
                 System.out.println("8. Change Password");
                 System.out.println("9. Display Profile");
+                System.out.println("10. Generate Receipt"); // Added this option
                 System.out.println("0. Logout");
                 System.out.print("Enter your choice: ");
                 
@@ -115,6 +116,10 @@ public class ApplicantInterface {
                         break;
                     case 9:
                         displayProfileInterface();
+                        break;
+                    // In the switch statement, add a case for generating receipt
+                    case 10:
+                        generateReceiptInterface();
                         break;
                     case 0:
                         userInterface.displayLoginMenu();
@@ -514,41 +519,43 @@ public class ApplicantInterface {
         displayApplicantMenu(currentApplicant);
     }
     
-    private void viewBookingReceipt(Applicant applicant) {
-        System.out.println("\n======== BOOKING RECEIPT ========");
-        
-        // Get the applicant's booking
-        FlatBooking booking = applicant.getBookedFlat();
-        
-        if (booking == null) {
-            // Try to get the application and generate receipt from there
-            ProjectApplication application = applicant.getAppliedProject();
-            
-            if (application != null && application.getStatus() == ApplicationStatus.BOOKED) {
-                // Generate and display receipt based on application
-                String receipt = receiptGenerator.formatReceipt(
-                    applicant,
-                    application.getProject(),
-                    application.getSelectedFlatType()
-                );
-                
-                System.out.println(receipt);
-            } else {
-                System.out.println("You do not have any confirmed flat bookings.");
-            }
-        } else {
-            // Generate and display the receipt from booking
-            String receipt = receiptGenerator.generateReceipt(booking);
-            System.out.println(receipt);
-        }
-        
+// Add this new method
+private void generateReceiptInterface() {
+    System.out.println("\n=== GENERATE RECEIPT ===");
+    
+    ProjectApplication application = applicationController.getApplicationByApplicantNRIC(currentApplicant.getNric());
+    
+    if (application != null && application.getStatus() == ApplicationStatus.BOOKED) {
+        // Generate receipt using the BookingController
+        String receipt = currentApplicant.generateReceipt(bookingController);
+        System.out.println(receipt);
         System.out.println("\nNote: To save this receipt, you can copy and paste the text above.");
-        
-        // Wait for user input before returning to menu
-        System.out.println("\nPress Enter to return to the main menu...");
-        scanner.nextLine();
-        
-        // Return to the applicant menu
-        displayApplicantMenu(applicant);
+    } else {
+        System.out.println("You do not have any confirmed flat bookings.");
+        System.out.println("A receipt can only be generated after a successful booking.");
     }
+    
+    // Wait for user input before returning to menu
+    System.out.println("\nPress Enter to return to the main menu...");
+    scanner.nextLine();
+    
+    // Return to the applicant menu
+    displayApplicantMenu(currentApplicant);
+}
+// Update the viewBookingReceipt method to use applicant.generateReceipt()
+private void viewBookingReceipt(Applicant applicant) {
+    System.out.println("\n======== BOOKING RECEIPT ========");
+    
+    // Use the Applicant's generateReceipt method directly
+    String receipt = applicant.generateReceipt();
+    System.out.println(receipt);
+    
+    System.out.println("\nNote: To save this receipt, you can copy and paste the text above.");
+    
+    // Wait for user input before returning to menu
+    System.out.println("\nPress Enter to return to the main menu...");
+    scanner.nextLine();
+    
+    // Return to the applicant menu
+    displayApplicantMenu(applicant);
 }

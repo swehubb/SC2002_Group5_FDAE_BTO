@@ -12,6 +12,7 @@ public class BookingController {
     private Map<String, FlatBooking> bookings; // Simulate a database of bookings
     private Map<String, String> rejectedBookings; // Track rejected bookings and reasons
     private ReceiptGenerator receiptGenerator;
+    private Map<String, Receipt> receipts;
 
     // Constructor
     public BookingController() {
@@ -174,26 +175,43 @@ public class BookingController {
         return false;
     }
 
-    // Original method
-    public String generateReceipt(FlatBooking booking) {
-        return receiptGenerator.generateReceipt(booking);
+    // Method to generate and store receipt
+    public Receipt generateAndStoreReceipt(FlatBooking booking) {
+        if (booking == null || booking.getApplicant() == null || booking.getProcessedByOfficer() == null) {
+            return null;
+        }
+        
+        String applicantNric = booking.getApplicant().getNric();
+        String officerNric = booking.getProcessedByOfficer().getNric();
+        String projectName = booking.getProject().getProjectName();
+        String flatType = booking.getFlatType().toString();
+        int flatId = booking.getFlatId();
+        
+        // Create a new receipt
+        Receipt receipt = new Receipt(applicantNric, officerNric, projectName, flatType, flatId);
+        
+        // Store the formatted receipt content if needed
+        String formattedReceipt = receiptGenerator.generateReceipt(booking);
+        receipt.setContent(formattedReceipt);
+        
+        // Store the receipt in the map
+        receipts.put(applicantNric, receipt);
+        
+        return receipt;
     }
     
-    // Method to generate receipt directly from booking controller
-    public boolean generateReceipt(ProjectApplication application) {
-        if (application == null || application.getApplicant() == null) {
-            return false;
-        }
-        
-        String nric = application.getApplicant().getNric();
-        FlatBooking booking = bookings.get(nric);
-        
-        if (booking == null) {
-            return false;
-        }
-        
-        // Generate receipt
-        String receipt = receiptGenerator.generateReceipt(booking);
-        return receipt != null && !receipt.isEmpty();
+    // Method to check if a receipt exists for an applicant
+    public boolean hasReceipt(String nric) {
+        return receipts.containsKey(nric);
+    }
+    
+    // Method to get receipt for an applicant
+    public Receipt getReceiptForApplicant(String nric) {
+        return receipts.get(nric);
+    }
+    
+    // Method to generate receipt content without storing
+    public String generateReceiptContent(FlatBooking booking) {
+        return receiptGenerator.generateReceipt(booking);
     }
 }

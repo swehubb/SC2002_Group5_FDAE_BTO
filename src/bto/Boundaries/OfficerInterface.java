@@ -103,14 +103,13 @@ public class OfficerInterface {
             case 3:
                 viewProjectAssignments(currentOfficer);
                 break;
-            case 4:
+	    case 4:
                 manageApplicationsAndBookings(currentOfficer);
                 break;
-            case 5:
-                // Generate Receipt for Booking - implementation needed
-                System.out.println("Function not implemented yet.");
-                displayOfficerMenu(officer);
-                break;
+            // In case 5 (Generate Receipt for Booking), replace the "Function not implemented yet" with:
+	    case 5:
+	    	generateReceiptForBooking();
+	    	break;
             case 6:
                 // View Pending Enquiries - implementation needed
                 System.out.println("Function not implemented yet.");
@@ -676,7 +675,7 @@ public class OfficerInterface {
 	    System.out.println("Available Units: " + availableUnits);
 	    
 	    if (availableUnits <= 0) {
-	        System.out.println("\nWARNING: No units of this type are currently available.");
+		System.out.println("\nWARNING: No units of this type are currently available.");
 	    }
 	    
 	    // Options
@@ -689,49 +688,76 @@ public class OfficerInterface {
 	    int choice = Integer.parseInt(scanner.nextLine());
 	    
 	    switch (choice) {
-	        case 1:
-	            if (availableUnits <= 0) {
-	                System.out.println("Cannot approve booking - no units available of the requested type.");
-	            } else {
-	                // Book a flat of the requested type
-	                int flatId = project.bookFlat(requestedType);
-	                
-	                if (flatId != -1) {
-	                    // Create a booking record
-	                    FlatBooking booking = new FlatBooking(applicant, project, requestedType, flatId);
-	                    boolean bookingCreated = bookingController.createBooking(booking);
-	                    
-	                    if (bookingCreated) {
-	                        System.out.println("Booking approved successfully!");
-	                        System.out.println("Flat ID: " + flatId);
-	                        System.out.println("A notification has been sent to the applicant.");
-	                    } else {
-	                        // If booking creation failed, release the flat
-	                        project.releaseFlat(flatId);
-	                        System.out.println("Failed to create booking record. The flat has been released.");
-	                    }
-	                } else {
-	                    System.out.println("Failed to book flat. No units available.");
-	                }
-	            }
-	            break;
-	            
-	        case 2:
-	            // Reject booking request
-	            System.out.print("Enter reason for rejection: ");
-	            String rejectionReason = scanner.nextLine();
-	            
-	            boolean rejectionResult = bookingController.rejectBooking(application, rejectionReason);
-	            
-	            if (rejectionResult) {
-	                System.out.println("Booking request rejected successfully.");
-	                // Reset the flat type selection to allow the applicant to choose another type
-	                application.setSelectedFlatType(null);
-	                System.out.println("The applicant will be notified and may select a different flat type.");
-	            } else {
-	                System.out.println("Failed to reject booking request. Please try again.");
-	            }
-	            break;
+		case 1:
+		    if (availableUnits <= 0) {
+			System.out.println("Cannot approve booking - no units available of the requested type.");
+		    } else {
+			// Book a flat of the requested type
+			int flatId = project.bookFlat(requestedType);
+			
+			if (flatId != -1) {
+			    // Create a booking record
+			    FlatBooking booking = new FlatBooking(applicant, project, requestedType, flatId);
+			    booking.setProcessedByOfficer(officer); // Set the processing officer
+			    boolean bookingCreated = bookingController.createBooking(booking);
+			    
+			    if (bookingCreated) {
+				System.out.println("Booking approved successfully!");
+				System.out.println("Flat ID: " + flatId);
+				
+				// Prompt for receipt generation
+				System.out.println("\nWould you like to generate a receipt for this booking?");
+				System.out.println("1. Yes");
+				System.out.println("2. No");
+				System.out.print("Enter your choice: ");
+				
+				try {
+				    int receiptChoice = Integer.parseInt(scanner.nextLine());
+				    
+				    if (receiptChoice == 1) {
+					// Generate and store receipt
+					Receipt receipt = bookingController.generateAndStoreReceipt(booking);
+					
+					if (receipt != null) {
+					    System.out.println("\n======== BOOKING RECEIPT ========");
+					    System.out.println(receipt.getContent());
+					    System.out.println("\nReceipt generated and linked to applicant's profile.");
+					} else {
+					    System.out.println("Failed to generate receipt. The applicant can request it later.");
+					}
+				    }
+				} catch (NumberFormatException e) {
+				    System.out.println("Invalid input. No receipt generated. The applicant can request it later.");
+				}
+				
+				System.out.println("A notification has been sent to the applicant.");
+			    } else {
+				// If booking creation failed, release the flat
+				project.releaseFlat(flatId);
+				System.out.println("Failed to create booking record. The flat has been released.");
+			    }
+			} else {
+			    System.out.println("Failed to book flat. No units available.");
+			}
+		    }
+		    break;
+		    
+		case 2:
+		    // Reject booking request
+		    System.out.print("Enter reason for rejection: ");
+		    String rejectionReason = scanner.nextLine();
+		    
+		    boolean rejectionResult = bookingController.rejectBooking(application, rejectionReason);
+		    
+		    if (rejectionResult) {
+			System.out.println("Booking request rejected successfully.");
+			// Reset the flat type selection to allow the applicant to choose another type
+			application.setSelectedFlatType(null);
+			System.out.println("The applicant will be notified and may select a different flat type.");
+		    } else {
+			System.out.println("Failed to reject booking request. Please try again.");
+		    }
+		    break;
 	    }
 	}
 
@@ -792,32 +818,27 @@ public class OfficerInterface {
 	    scanner.nextLine();
 	}
 
-	private void viewBookingDetails(FlatBooking booking) {
-	    System.out.println("\n======== BOOKING DETAILS ========");
-	    System.out.println(booking.getBookingDetails());
+	private void viewBookingReceipt(Applicant applicant) {
+	    System.out.println("\n======== BOOKING RECEIPT ========");
 	    
-	    // Print receipt option
-	    System.out.println("\nOptions:");
-	    System.out.println("1. Print Receipt");
-	    System.out.println("0. Back");
+	    // Use the Applicant's generateReceipt method with BookingController
+	    String receipt = applicant.generateReceipt(bookingController);
 	    
-	    System.out.print("\nEnter your choice: ");
-	    int choice = Integer.parseInt(scanner.nextLine());
+	    // The receipt string will contain a message if there's no receipt available
+	    System.out.println(receipt);
 	    
-	    if (choice == 1) {
-	        String receipt = receiptGenerator.generateReceipt(booking);
-	        if (receipt != null && !receipt.isEmpty()) {
-	            System.out.println("\n======== BOOKING RECEIPT ========");
-	            System.out.println(receipt);
-	        } else {
-	            System.out.println("Failed to generate receipt. Please try again later.");
-	        }
+	    // If a receipt exists, offer saving options
+	    if (bookingController.hasReceipt(applicant.getNric())) {
+	        System.out.println("\nNote: To save this receipt, you can copy and paste the text above.");
+	    } else {
+	        System.out.println("\nYou can request a receipt to be generated by contacting an HDB Officer.");
 	    }
 	    
-	    // Wait for user input before returning
+	    // Wait for user input before returning to menu
 	    System.out.println("\nPress Enter to continue...");
 	    scanner.nextLine();
 	}
+
 
 	private void browseProjects(HDBOfficer officer) {
 	    System.out.println("\n======== AVAILABLE PROJECTS (APPLICANT VIEW) ========");
@@ -1337,4 +1358,120 @@ public class OfficerInterface {
         
         
     }
+
+	// Add this new method
+	private void generateReceiptForBooking() {
+	    System.out.println("\n=== GENERATE RECEIPT FOR BOOKING ===");
+	    
+	    // First check if officer has any assigned projects
+	    if (currentOfficer.getAssignedProjects().isEmpty()) {
+	        System.out.println("You are not assigned to any projects yet.");
+	        System.out.println("Please register for and get approved for a project first.");
+	        
+	        // Wait for user input before returning to menu
+	        System.out.println("\nPress Enter to return to the main menu...");
+	        scanner.nextLine();
+	        displayOfficerMenu(currentOfficer);
+	        return;
+	    }
+	    
+	    // Get list of projects the officer is handling
+	    List<Project> assignedProjects = currentOfficer.getAssignedProjects();
+	    System.out.println("Select a project:");
+	    
+	    for (int i = 0; i < assignedProjects.size(); i++) {
+	        System.out.println((i+1) + ". " + assignedProjects.get(i).getProjectName());
+	    }
+	    
+	    System.out.println("0. Back to Main Menu");
+	    System.out.print("\nEnter your choice: ");
+	    
+	    try {
+	        int projectChoice = Integer.parseInt(scanner.nextLine());
+	        
+	        if (projectChoice == 0) {
+	            displayOfficerMenu(currentOfficer);
+	            return;
+	        }
+	        
+	        if (projectChoice < 1 || projectChoice > assignedProjects.size()) {
+	            System.out.println("Invalid project selection.");
+	            generateReceiptForBooking();
+	            return;
+	        }
+	        
+	        // Get the selected project
+	        Project selectedProject = assignedProjects.get(projectChoice-1);
+	        
+	        // Get applications for the selected project that are in BOOKED status
+	        List<ProjectApplication> applications = new ArrayList<>();
+	        List<ProjectApplication> allApps = applicationController.getApplicationsByProject(selectedProject);
+	        
+	        for (ProjectApplication app : allApps) {
+	            if (app.getStatus() == ApplicationStatus.BOOKED) {
+	                applications.add(app);
+	            }
+	        }
+	        
+	        if (applications.isEmpty()) {
+	            System.out.println("No booked applications found for this project.");
+	            System.out.println("\nPress Enter to continue...");
+	            scanner.nextLine();
+	            generateReceiptForBooking();
+	            return;
+	        }
+	        
+	        System.out.println("\nSelect an applicant to generate receipt for:");
+	        for (int i = 0; i < applications.size(); i++) {
+	            Applicant applicant = applications.get(i).getApplicant();
+	            System.out.println((i+1) + ". " + applicant.getName() + " (" + applicant.getNric() + ")");
+	        }
+	        
+	        System.out.println("0. Back");
+	        System.out.print("\nEnter your choice: ");
+	        
+	        int applicantChoice = Integer.parseInt(scanner.nextLine());
+	        
+	        if (applicantChoice == 0) {
+	            generateReceiptForBooking();
+	            return;
+	        }
+	        
+	        if (applicantChoice < 1 || applicantChoice > applications.size()) {
+	            System.out.println("Invalid applicant selection.");
+	            generateReceiptForBooking();
+	            return;
+	        }
+	        
+	        // Get the selected application
+	        ProjectApplication selectedApp = applications.get(applicantChoice-1);
+	        
+	        // Generate receipt using the officer's method
+	        String receipt = currentOfficer.generateReceipt(selectedApp);
+	        
+	        if (receipt != null && !receipt.isEmpty()) {
+	            System.out.println("\n======== BOOKING RECEIPT ========");
+	            System.out.println(receipt);
+	            System.out.println("\nReceipt generated successfully!");
+	        } else {
+	            System.out.println("\nFailed to generate receipt. This could be because:");
+	            System.out.println("- You cannot generate a receipt for your own application");
+	            System.out.println("- The application status is not BOOKED");
+	            System.out.println("- There was an error in the receipt generation process");
+	        }
+	        
+	        // Offer save option
+	        System.out.println("\nNote: To save this receipt, you can copy and paste the text above.");
+	        
+	    } catch (NumberFormatException e) {
+	        System.out.println("Invalid input. Please enter a number.");
+	    }
+	    
+	    // Wait for user input before returning to menu
+	    System.out.println("\nPress Enter to return to the main menu...");
+	    scanner.nextLine();
+	    
+	    // Return to the officer menu
+	    displayOfficerMenu(currentOfficer);
 	}
+}
