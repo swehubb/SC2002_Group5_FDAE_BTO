@@ -913,10 +913,9 @@ public class ManagerInterface {
     
     private void displayEnquiryDetails(Enquiry enquiry) {
         System.out.println("\nEnquiry ID: " + enquiry.getEnquiryId());
-        System.out.println("From: " + enquiry.getSender().getName());
-        System.out.println("Project: " + (enquiry.getProject() != null ? enquiry.getProject().getProjectName() : "N/A"));
-        System.out.println("Subject: " + enquiry.getSubject());
-        System.out.println("Message: " + enquiry.getMessage());
+        System.out.println("From: " + enquiry.getApplicant().getName());
+        System.out.println("Project: " + (enquiry.getProject() != null ? enquiry.getProject().getProjectName() : "General"));
+        System.out.println("Message: " + enquiry.getEnquiryContent());
         System.out.println("Status: " + (enquiry.isResponded() ? "Responded" : "Pending"));
         
         if (enquiry.isResponded()) {
@@ -930,58 +929,64 @@ public class ManagerInterface {
     
     private void respondToEnquiry(HDBManager manager) {
         showMessage("\n=== RESPOND TO ENQUIRY ===");
-        
+    
         // Get pending enquiries for manager's projects
         List<Enquiry> pendingEnquiries = new ArrayList<>();
         List<Project> projects = projectController.getAllProjects();
         List<Project> managerProjects = manager.ownProjects(projects, manager);
-        
+    
+        // Filter pending enquiries
         for (Enquiry enquiry : enquiryController.getAllEnquiries()) {
-            if (!enquiry.isResponded() && 
+            if (!enquiry.isResponded() &&
                 (enquiry.getProject() == null || managerProjects.contains(enquiry.getProject()))) {
                 pendingEnquiries.add(enquiry);
             }
         }
-        
+    
+        // Check if there are any pending enquiries
         if (pendingEnquiries.isEmpty()) {
             showMessage("No pending enquiries for your projects.");
             return;
         }
-        
+    
         // Display pending enquiries
         showMessage("Pending Enquiries:");
         for (int i = 0; i < pendingEnquiries.size(); i++) {
             Enquiry enquiry = pendingEnquiries.get(i);
-            System.out.println((i+1) + ". From: " + enquiry.getSender().getName() + 
-                              " - Subject: " + enquiry.getSubject() + 
-                              " - Project: " + (enquiry.getProject() != null ? enquiry.getProject().getProjectName() : "N/A"));
+            System.out.println((i+1) + ". From: " + enquiry.getSender().getName() +
+                                " - Subject: " + enquiry.getSubject() +
+                                " - Project: " + (enquiry.getProject() != null ? enquiry.getProject().getProjectName() : "N/A"));
         }
-        
+    
         // Get user selection
         int selection = Integer.parseInt(getInput("Select an enquiry to respond to (0 to cancel): "));
-        
+    
+        // Validate selection
         if (selection == 0 || selection > pendingEnquiries.size()) {
             showMessage("Operation cancelled.");
             return;
         }
-        
+    
+        // Get selected enquiry
         Enquiry selectedEnquiry = pendingEnquiries.get(selection - 1);
-        
+    
         // Display enquiry details
         showMessage("\nEnquiry Details:");
         displayEnquiryDetails(selectedEnquiry);
-        
+    
         // Get response
         String response = getInput("Enter your response: ");
-        
+    
+        // Validate and process response
         if (!response.trim().isEmpty()) {
-            if (manager.respondToEnquiry(selectedEnquiry)) {
-                // Set response details
+            // Attempt to respond to the enquiry
+            if (enquiryController.respondToEnquiry(selectedEnquiry, response, manager)) {
+                // Update enquiry details
                 selectedEnquiry.setResponse(response);
                 selectedEnquiry.setRespondedBy(manager);
                 selectedEnquiry.setResponseDate(new Date());
                 selectedEnquiry.setResponded(true);
-                
+    
                 showMessage("Response sent successfully!");
             } else {
                 showMessage("Failed to send response.");

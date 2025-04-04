@@ -1,14 +1,14 @@
 package bto.Boundaries;
 
-import java.util.Scanner;
 import bto.Controllers.*;
 import bto.Entities.*;
-import java.text.SimpleDateFormat;
-import java.util.List;
-import java.util.Map;
 import bto.EntitiesProjectRelated.*;
 import bto.Enums.*;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
 
 public class OfficerInterface {
     private Scanner scanner;
@@ -111,42 +111,32 @@ public class OfficerInterface {
                 System.out.println("Function not implemented yet.");
                 displayOfficerMenu(officer);
                 break;
-            case 6:
-                // View Pending Enquiries - implementation needed
-                System.out.println("Function not implemented yet.");
-                displayOfficerMenu(officer);
-                break;
-            case 7:
-                // Respond to Enquiries - implementation needed
-                System.out.println("Function not implemented yet.");
-                displayOfficerMenu(officer);
-                break;
+			case 6:
+				viewPendingEnquiries(currentOfficer);
+				break;
+			case 7:
+				respondToEnquiries(currentOfficer);
+				break;
             case 8:
                 browseProjects(currentOfficer);
                 break;
             case 9:
                 viewOfficerApplicationStatus(currentOfficer);
                 break;
-            case 10:
-                // Submit Enquiry - implementation needed
-                System.out.println("Function not implemented yet.");
-                displayOfficerMenu(officer);
-                break;
-            case 11:
-                // View My Enquiries - implementation needed
-                System.out.println("Function not implemented yet.");
-                displayOfficerMenu(officer);
-                break;
-            case 12:
-                // Edit My Enquiry - implementation needed
-                System.out.println("Function not implemented yet.");
-                displayOfficerMenu(officer);
-                break;
-            case 13:
-                // Delete My Enquiry - implementation needed
-                System.out.println("Function not implemented yet.");
-                displayOfficerMenu(officer);
-                break;
+				case 10:
+				submitEnquiry(currentOfficer);
+				break;
+			case 11:
+				viewMyEnquiries(currentOfficer);
+				break;
+			case 12:
+				// This will now be handled within viewMyEnquiries
+				viewMyEnquiries(currentOfficer);
+				break;
+			case 13:
+				// This will now be handled within viewMyEnquiries
+				viewMyEnquiries(currentOfficer);
+				break;
             case 14:
                 // Request Withdrawal - implementation needed
                 System.out.println("Function not implemented yet.");
@@ -1337,4 +1327,457 @@ public class OfficerInterface {
         
         
     }
+
+	private void viewPendingEnquiries(HDBOfficer officer) {
+		System.out.println("\n======== PENDING ENQUIRIES ========");
+		
+		// Get enquiries for projects this officer is assigned to
+		List<Enquiry> pendingEnquiries = new ArrayList<>();
+		List<Project> assignedProjects = officer.getAssignedProjects();
+		
+		for (Enquiry enquiry : enquiryController.getAllEnquiries()) {
+			// Include enquiries that have no response and are for projects this officer is assigned to
+			if (enquiry.getResponse() == null && 
+				(enquiry.getProject() == null || assignedProjects.contains(enquiry.getProject()))) {
+				pendingEnquiries.add(enquiry);
+			}
+		}
+		
+		if (pendingEnquiries.isEmpty()) {
+			System.out.println("No pending enquiries for your assigned projects.");
+		} else {
+			System.out.println("ID\tApplicant\t\tProject\t\tSubmission Date\t\tEnquiry Content");
+			System.out.println("------------------------------------------------------------------------------------------");
+			
+			SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+			
+			for (int i = 0; i < pendingEnquiries.size(); i++) {
+				Enquiry enquiry = pendingEnquiries.get(i);
+				String projectName = enquiry.getProject() != null ? enquiry.getProject().getProjectName() : "General";
+				
+				System.out.printf("%-3d %-20s %-20s %-12s %s%n", 
+					i + 1, 
+					enquiry.getApplicant().getName(), 
+					projectName,
+					dateFormat.format(enquiry.getSubmissionDate()),
+					enquiry.getEnquiryContent().length() > 30 ? 
+						enquiry.getEnquiryContent().substring(0, 27) + "..." : 
+						enquiry.getEnquiryContent()
+				);
+			}
+			
+			System.out.println("\nOptions:");
+			System.out.println("1. View Enquiry Details");
+			System.out.println("2. Respond to Enquiry");
+			System.out.println("0. Back to Main Menu");
+			
+			System.out.print("\nEnter your choice: ");
+			try {
+				int choice = Integer.parseInt(scanner.nextLine());
+				
+				switch (choice) {
+					case 1:
+						System.out.print("Enter enquiry ID to view details: ");
+						int viewId = Integer.parseInt(scanner.nextLine());
+						
+						if (viewId > 0 && viewId <= pendingEnquiries.size()) {
+							viewEnquiryDetails(pendingEnquiries.get(viewId - 1));
+						} else {
+							System.out.println("Invalid enquiry ID.");
+						}
+						viewPendingEnquiries(officer); // Return to the pending enquiries list
+						break;
+						
+					case 2:
+						System.out.print("Enter enquiry ID to respond: ");
+						int respondId = Integer.parseInt(scanner.nextLine());
+						
+						if (respondId > 0 && respondId <= pendingEnquiries.size()) {
+							respondToEnquiry(pendingEnquiries.get(respondId - 1), officer);
+						} else {
+							System.out.println("Invalid enquiry ID.");
+							viewPendingEnquiries(officer);
+						}
+						break;
+						
+					case 0:
+						// Return to menu happens after this function
+						break;
+						
+					default:
+						System.out.println("Invalid choice.");
+						viewPendingEnquiries(officer);
+						break;
+				}
+			} catch (NumberFormatException e) {
+				System.out.println("Invalid input. Please enter a number.");
+				viewPendingEnquiries(officer);
+			}
+		}
+		
+		// Wait for user input before returning to menu
+		System.out.println("\nPress Enter to return to the main menu...");
+		scanner.nextLine();
+		
+		// Return to the officer menu
+		displayOfficerMenu(officer);
+	}
+	
+	private void viewEnquiryDetails(Enquiry enquiry) {
+		System.out.println("\n======== ENQUIRY DETAILS ========");
+		System.out.println("Applicant: " + enquiry.getApplicant().getName() + " (" + enquiry.getApplicant().getNric() + ")");
+		
+		String projectName = enquiry.getProject() != null ? 
+							   enquiry.getProject().getProjectName() : "General Enquiry";
+		System.out.println("Project: " + projectName);
+		
+		SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+		System.out.println("Submission Date: " + dateFormat.format(enquiry.getSubmissionDate()));
+		
+		System.out.println("\nEnquiry Content:");
+		System.out.println(enquiry.getEnquiryContent());
+		
+		if (enquiry.getResponse() != null && !enquiry.getResponse().isEmpty()) {
+			System.out.println("\nResponse:");
+			System.out.println(enquiry.getResponse());
+		} else {
+			System.out.println("\nStatus: Pending Response");
+		}
+		
+		// Wait for user input before returning
+		System.out.println("\nPress Enter to continue...");
+		scanner.nextLine();
+	}
+
+	private void respondToEnquiries(HDBOfficer officer) {
+		System.out.println("\n======== RESPOND TO ENQUIRIES ========");
+		
+		// Get all pending enquiries for this officer's projects
+		List<Enquiry> pendingEnquiries = new ArrayList<>();
+		List<Project> assignedProjects = officer.getAssignedProjects();
+		
+		for (Enquiry enquiry : enquiryController.getAllEnquiries()) {
+			if (enquiry.getResponse() == null && 
+				(enquiry.getProject() == null || assignedProjects.contains(enquiry.getProject()))) {
+				pendingEnquiries.add(enquiry);
+			}
+		}
+		
+		if (pendingEnquiries.isEmpty()) {
+			System.out.println("No pending enquiries to respond to.");
+		} else {
+			System.out.println("Pending Enquiries:");
+			System.out.println("ID\tApplicant\t\tProject\t\tSubmission Date\t\tEnquiry Content");
+			System.out.println("------------------------------------------------------------------------------------------");
+			
+			SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+			
+			for (int i = 0; i < pendingEnquiries.size(); i++) {
+				Enquiry enquiry = pendingEnquiries.get(i);
+				String projectName = enquiry.getProject() != null ? enquiry.getProject().getProjectName() : "General";
+				
+				System.out.printf("%-3d %-20s %-20s %-12s %s%n", 
+					i + 1, 
+					enquiry.getApplicant().getName(), 
+					projectName,
+					dateFormat.format(enquiry.getSubmissionDate()),
+					enquiry.getEnquiryContent().length() > 30 ? 
+						enquiry.getEnquiryContent().substring(0, 27) + "..." : 
+						enquiry.getEnquiryContent()
+				);
+			}
+			
+			System.out.print("\nEnter enquiry ID to respond to (or 0 to cancel): ");
+			try {
+				int enquiryId = Integer.parseInt(scanner.nextLine());
+				
+				if (enquiryId > 0 && enquiryId <= pendingEnquiries.size()) {
+					respondToEnquiry(pendingEnquiries.get(enquiryId - 1), officer);
+				} else if (enquiryId != 0) {
+					System.out.println("Invalid enquiry ID.");
+				}
+			} catch (NumberFormatException e) {
+				System.out.println("Invalid input. Please enter a number.");
+			}
+		}
+		
+		// Wait for user input before returning to menu
+		System.out.println("\nPress Enter to return to the main menu...");
+		scanner.nextLine();
+		
+		// Return to the officer menu
+		displayOfficerMenu(officer);
+	}
+	
+	private void respondToEnquiry(Enquiry enquiry, HDBOfficer officer) {
+		System.out.println("\n======== RESPOND TO ENQUIRY ========");
+		
+		// Display enquiry details
+		viewEnquiryDetails(enquiry);
+		
+		// Get response from officer
+		System.out.println("\nEnter your response:");
+		String response = scanner.nextLine();
+		
+		if (response.trim().isEmpty()) {
+			System.out.println("Response cannot be empty. Operation cancelled.");
+		} else {
+			// Update the enquiry with the response
+			boolean success = enquiryController.respondToEnquiry(enquiry, response, officer);
+			
+			if (success) {
+				System.out.println("\nResponse submitted successfully!");
+				System.out.println("The applicant will be notified of your response.");
+			} else {
+				System.out.println("\nFailed to submit response. Please try again later.");
+			}
+		}
+	}
+
+	private void submitEnquiry(HDBOfficer officer) {
+		System.out.println("\n======== SUBMIT ENQUIRY ========");
+		
+		// Get the applicant role of the officer
+		Applicant applicantRole = officer.getApplicantRole();
+		
+		// Ask if enquiry is about a specific project
+		System.out.println("Is this enquiry about a specific project?");
+		System.out.println("1. Yes");
+		System.out.println("2. No (General Enquiry)");
+		
+		System.out.print("\nEnter your choice: ");
+		int projectChoice = Integer.parseInt(scanner.nextLine());
+		
+		Project selectedProject = null;
+		
+		if (projectChoice == 1) {
+			// Get visible projects
+			List<Project> visibleProjects = projectController.getVisibleProjectsForApplicant(applicantRole);
+			
+			if (visibleProjects.isEmpty()) {
+				System.out.println("No projects available. Submitting as a general enquiry.");
+			} else {
+				System.out.println("\nSelect Project:");
+				for (int i = 0; i < visibleProjects.size(); i++) {
+					System.out.println((i+1) + ". " + visibleProjects.get(i).getProjectName());
+				}
+				
+				System.out.print("\nEnter project number (or 0 for general enquiry): ");
+				int projectNum = Integer.parseInt(scanner.nextLine());
+				
+				if (projectNum > 0 && projectNum <= visibleProjects.size()) {
+					selectedProject = visibleProjects.get(projectNum - 1);
+					System.out.println("Selected project: " + selectedProject.getProjectName());
+				} else {
+					System.out.println("No project selected. Submitting as a general enquiry.");
+				}
+			}
+		}
+		
+		// Get enquiry content
+		System.out.println("\nEnter your enquiry:");
+		String enquiryContent = scanner.nextLine();
+		
+		if (enquiryContent.trim().isEmpty()) {
+			System.out.println("Enquiry content cannot be empty. Operation cancelled.");
+		} else {
+			// Create the enquiry
+			Enquiry newEnquiry = enquiryController.createEnquiry(applicantRole, selectedProject, enquiryContent);
+			
+			if (newEnquiry != null) {
+				System.out.println("\nEnquiry submitted successfully!");
+				System.out.println("You will be notified when a response is available.");
+			} else {
+				System.out.println("\nFailed to submit enquiry. Please try again later.");
+			}
+		}
+		
+		// Wait for user input before returning to menu
+		System.out.println("\nPress Enter to return to the main menu...");
+		scanner.nextLine();
+		
+		// Return to the officer menu
+		displayOfficerMenu(officer);
+	}
+
+	private void viewMyEnquiries(HDBOfficer officer) {
+		System.out.println("\n======== MY ENQUIRIES ========");
+		
+		// Get the officer's enquiries as an applicant
+		Applicant applicantRole = officer.getApplicantRole();
+		List<Enquiry> myEnquiries = enquiryController.getEnquiriesByApplicant(applicantRole);
+		
+		if (myEnquiries.isEmpty()) {
+			System.out.println("You have not submitted any enquiries.");
+		} else {
+			System.out.println("Your Enquiries:");
+			System.out.println("ID\tProject\t\tSubmission Date\t\tStatus\t\tEnquiry Content");
+			System.out.println("------------------------------------------------------------------------------------------");
+			
+			SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+			
+			for (int i = 0; i < myEnquiries.size(); i++) {
+				Enquiry enquiry = myEnquiries.get(i);
+				String projectName = enquiry.getProject() != null ? enquiry.getProject().getProjectName() : "General";
+				String status = enquiry.getResponse() != null ? "Responded" : "Pending";
+				
+				System.out.printf("%-3d %-20s %-12s %-12s %s%n", 
+					i + 1, 
+					projectName,
+					dateFormat.format(enquiry.getSubmissionDate()),
+					status,
+					enquiry.getEnquiryContent().length() > 30 ? 
+						enquiry.getEnquiryContent().substring(0, 27) + "..." : 
+						enquiry.getEnquiryContent()
+				);
+			}
+			
+			System.out.println("\nOptions:");
+			System.out.println("1. View Enquiry Details");
+			System.out.println("2. Edit Enquiry");
+			System.out.println("3. Delete Enquiry");
+			System.out.println("0. Back to Main Menu");
+			
+			System.out.print("\nEnter your choice: ");
+			try {
+				int choice = Integer.parseInt(scanner.nextLine());
+				
+				switch (choice) {
+					case 1:
+						System.out.print("Enter enquiry ID to view details: ");
+						int viewId = Integer.parseInt(scanner.nextLine());
+						
+						if (viewId > 0 && viewId <= myEnquiries.size()) {
+							viewEnquiryDetails(myEnquiries.get(viewId - 1));
+						} else {
+							System.out.println("Invalid enquiry ID.");
+						}
+						viewMyEnquiries(officer); // Return to list
+						break;
+						
+					case 2:
+						System.out.print("Enter enquiry ID to edit: ");
+						int editId = Integer.parseInt(scanner.nextLine());
+						
+						if (editId > 0 && editId <= myEnquiries.size()) {
+							editMyEnquiry(myEnquiries.get(editId - 1), officer);
+						} else {
+							System.out.println("Invalid enquiry ID.");
+							viewMyEnquiries(officer);
+						}
+						break;
+						
+					case 3:
+						System.out.print("Enter enquiry ID to delete: ");
+						int deleteId = Integer.parseInt(scanner.nextLine());
+						
+						if (deleteId > 0 && deleteId <= myEnquiries.size()) {
+							deleteMyEnquiry(myEnquiries.get(deleteId - 1), officer);
+						} else {
+							System.out.println("Invalid enquiry ID.");
+							viewMyEnquiries(officer);
+						}
+						break;
+						
+					case 0:
+						// Return to menu
+						break;
+						
+					default:
+						System.out.println("Invalid choice.");
+						viewMyEnquiries(officer);
+						break;
+				}
+			} catch (NumberFormatException e) {
+				System.out.println("Invalid input. Please enter a number.");
+				viewMyEnquiries(officer);
+			}
+		}
+		
+		// Wait for user input before returning to menu
+		System.out.println("\nPress Enter to return to the main menu...");
+		scanner.nextLine();
+		
+		// Return to the officer menu
+		displayOfficerMenu(officer);
+	}
+
+	private void editMyEnquiry(Enquiry enquiry, HDBOfficer officer) {
+		System.out.println("\n======== EDIT ENQUIRY ========");
+		
+		// Check if enquiry already has a response
+		if (enquiry.getResponse() != null) {
+			System.out.println("You cannot edit an enquiry that has already been responded to.");
+			
+			// Wait for user input before returning
+			System.out.println("\nPress Enter to continue...");
+			scanner.nextLine();
+			
+			// Return to view my enquiries
+			viewMyEnquiries(officer);
+			return;
+		}
+		
+		// Display current enquiry
+		System.out.println("Current Enquiry Content:");
+		System.out.println(enquiry.getEnquiryContent());
+		
+		// Get new content
+		System.out.println("\nEnter new enquiry content (or leave empty to cancel):");
+		String newContent = scanner.nextLine();
+		
+		if (newContent.trim().isEmpty()) {
+			System.out.println("Edit cancelled.");
+		} else {
+			// Update the enquiry
+			boolean success = enquiryController.editEnquiry(enquiry, newContent);
+			
+			if (success) {
+				System.out.println("\nEnquiry updated successfully!");
+			} else {
+				System.out.println("\nFailed to update enquiry. Please try again later.");
+			}
+		}
+		
+		// Wait for user input before returning
+		System.out.println("\nPress Enter to continue...");
+		scanner.nextLine();
+		
+		// Return to view my enquiries
+		viewMyEnquiries(officer);
+	}
+
+	private void deleteMyEnquiry(Enquiry enquiry, HDBOfficer officer) {
+		System.out.println("\n======== DELETE ENQUIRY ========");
+		
+		// Display enquiry to be deleted
+		System.out.println("Enquiry to be deleted:");
+		System.out.println("Project: " + (enquiry.getProject() != null ? enquiry.getProject().getProjectName() : "General"));
+		System.out.println("Submission Date: " + new SimpleDateFormat("dd/MM/yyyy").format(enquiry.getSubmissionDate()));
+		System.out.println("Content: " + enquiry.getEnquiryContent());
+		
+		// Confirmation
+		System.out.print("\nAre you sure you want to delete this enquiry? (Y/N): ");
+		String confirm = scanner.nextLine();
+		
+		if (confirm.equalsIgnoreCase("Y")) {
+			// Delete the enquiry
+			boolean success = enquiryController.deleteEnquiry(enquiry);
+			
+			if (success) {
+				System.out.println("\nEnquiry deleted successfully!");
+			} else {
+				System.out.println("\nFailed to delete enquiry. Please try again later.");
+			}
+		} else {
+			System.out.println("Delete operation cancelled.");
+		}
+		
+		// Wait for user input before returning
+		System.out.println("\nPress Enter to continue...");
+		scanner.nextLine();
+		
+		// Return to view my enquiries
+		viewMyEnquiries(officer);
+	}
 	}

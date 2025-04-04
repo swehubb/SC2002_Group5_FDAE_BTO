@@ -3,9 +3,7 @@ package bto.Boundaries;
 import bto.Controllers.*;
 import bto.Entities.*;
 import bto.EntitiesProjectRelated.*;
-import bto.Enums.*;
 import java.util.List;
-import java.util.ArrayList;
 
 public class BTOManagementSystem {
     private static UserInterface ui;
