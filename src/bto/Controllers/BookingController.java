@@ -178,27 +178,31 @@ public class BookingController {
 
     // Method to generate and store receipt
     public Receipt generateAndStoreReceipt(FlatBooking booking) {
-        if (booking == null || booking.getApplicant() == null || booking.getProcessedByOfficer() == null) {
-            return null;
-        }
-        
-        String applicantNric = booking.getApplicant().getNric();
-        String officerNric = booking.getProcessedByOfficer().getNric();
-        String projectName = booking.getProject().getProjectName();
-        String flatType = booking.getFlatType().toString();
-        int flatId = booking.getFlatId();
-        
-        // Create a new receipt
-        Receipt receipt = new Receipt(applicantNric, officerNric, projectName, flatType, flatId);
-        
-        // Store the formatted receipt content if needed
-        String formattedReceipt = receiptGenerator.generateReceipt(booking);
-        receipt.setContent(formattedReceipt);
-        
-        // Store the receipt in the map
-        receipts.put(applicantNric, receipt);
-        
-        return receipt;
+    if (booking == null || booking.getApplicant() == null || booking.getProcessedByOfficer() == null) {
+        return null;
+    }
+    
+    String applicantNric = booking.getApplicant().getNric();
+    
+    // Check if a receipt already exists for this applicant
+    if (receipts.containsKey(applicantNric)) {
+        // Return the existing receipt instead of creating a new one
+        return receipts.get(applicantNric);
+    }
+    
+    // Create a new receipt (original code continues...)
+    String officerNric = booking.getProcessedByOfficer().getNric();
+    String projectName = booking.getProject().getProjectName();
+    String flatType = booking.getFlatType().toString();
+    int flatId = booking.getFlatId();
+    
+    Receipt receipt = new Receipt(applicantNric, officerNric, projectName, flatType, flatId);
+    String formattedReceipt = receiptGenerator.generateReceipt(booking);
+    receipt.setContent(formattedReceipt);
+    
+    receipts.put(applicantNric, receipt);
+    
+    return receipt;
     }
     
     // Method to check if a receipt exists for an applicant
