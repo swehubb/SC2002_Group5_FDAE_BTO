@@ -24,8 +24,10 @@ public class FileManager {
 	private static final String OFFICER_REGISTRATION_FILE = "./src/bto/data/Officer Registration List.txt";	
 	private static final String ENQUIRY_FILE = "./src/bto/data/Enquiry List.txt";
 	private static final String APPLICATION_FILE = "./src/bto/data/Application List.txt";
-	private static final String REPORT_FILE = "./src/bto/data/Report List.txt";
 	private static final String BOOKING_FILE = "./src/bto/data/Booking List.txt";
+	private static final String RECEIPT_FILE = "./src/bto/data/Receipt List.txt";
+	// Removed REPORT_FILE constant
+	
  
  private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("dd/MM/yy");
  
@@ -302,7 +304,7 @@ public class FileManager {
 	    return applications;
 	}
 
-	public List<Enquiry> loadEnquiries(List<Applicant> applicants, List<Project> projects) {
+ public List<Enquiry> loadEnquiries(List<Applicant> applicants, List<Project> projects, List<User> allUsers) {
 	    List<Enquiry> enquiries = new ArrayList<>();
 	    
 	    try (BufferedReader reader = new BufferedReader(new FileReader(ENQUIRY_FILE))) {
@@ -314,23 +316,49 @@ public class FileManager {
 	        
 	        while ((line = reader.readLine()) != null) {
 	            String[] parts = line.split("\t");
-	            if (parts.length < 5) continue;
+	            if (parts.length < 7) continue; // Need at least 7 fields with the new format
 	            
 	            // Find matching applicant and project
 	            Applicant applicant = findApplicantByNRIC(parts[0], applicants);
-	            Project project = findProjectByName(parts[1], projects);
+	            Project project = "N/A".equals(parts[1]) ? null : findProjectByName(parts[1], projects);
 	            
-	            if (applicant != null && project != null) {
+	            if (applicant != null) {
+	                // Create enquiry
 	                Enquiry enquiry = new Enquiry(applicant, project, parts[2]);
 	                
+	                // Set enquiry ID
+	                enquiry.setEnquiryId(Integer.parseInt(parts[3]));
+	                
 	                // Set response if exists
-	                if (!"N/A".equals(parts[3])) {
-	                    enquiry.setResponse(parts[3]);
+	                if (!"N/A".equals(parts[4])) {
+	                    enquiry.setResponse(parts[4]);
+	                    
+	                    // Find responder
+	                    if (!"N/A".equals(parts[5])) {
+	                        User responder = findUserByNRIC(parts[5], allUsers);
+	                        if (responder != null) {
+	                            enquiry.setRespondedBy(responder);
+	                        }
+	                    }
+	                    
+	                    // Set response date
+	                    if (!"N/A".equals(parts[6])) {
+	                        try {
+	                            enquiry.setResponseDate(dateFormat.parse(parts[6]));
+	                        } catch (ParseException e) {
+	                            // Use current date if parsing fails
+	                            enquiry.setResponseDate(new Date());
+	                        }
+	                    }
 	                }
 	                
 	                // Set submission date
 	                try {
-	                    enquiry.setSubmissionDate(dateFormat.parse(parts[4]));
+	                    if (parts.length > 7 && !"N/A".equals(parts[7])) {
+	                        enquiry.setSubmissionDate(dateFormat.parse(parts[7]));
+	                    } else {
+	                        enquiry.setSubmissionDate(new Date());
+	                    }
 	                } catch (ParseException e) {
 	                    // Use current date if parsing fails
 	                    enquiry.setSubmissionDate(new Date());
@@ -344,6 +372,14 @@ public class FileManager {
 	    }
 	    
 	    return enquiries;
+	}
+
+	// Helper method to find a user by NRIC across all user types
+	private User findUserByNRIC(String nric, List<User> allUsers) {
+	    return allUsers.stream()
+	        .filter(u -> u.getNric().equals(nric))
+	        .findFirst()
+	        .orElse(null);
 	}
 
 	// Helper methods to find applicant and project
@@ -405,31 +441,7 @@ public class FileManager {
 	        .orElse(null);
 	}
 	
-
-	public List<Report> loadReports() {
-	    List<Report> reports = new ArrayList<>();
-	    
-	    try (BufferedReader reader = new BufferedReader(new FileReader(REPORT_FILE))) {
-	        // Skip header
-	        reader.readLine();
-	        
-	        String line;
-	        while ((line = reader.readLine()) != null) {
-	            String[] parts = line.split("\t");
-	            if (parts.length < 3) continue;
-	            
-	            // Create report with loaded information
-	            FilterCriteria criteria = new FilterCriteria();
-	            Report report = new Report(parts[0], criteria);
-	            
-	            reports.add(report);
-	        }
-	    } catch (IOException e) {
-	        System.out.println("Error loading reports: " + e.getMessage());
-	    }
-	    
-	    return reports;
-	}
+	// Removed loadReports method
 
 	/**
 	 * Loads flat bookings from file
@@ -487,7 +499,7 @@ public class FileManager {
 	                
 	                // Update application status if this is an approved booking
 	                if (booking.isApproved()) {
-	                    ProjectApplication application = applicant.getAppliedProject();
+	                	ProjectApplication application = applicant.getAppliedProject();
 	                    if (application != null && application.getStatus() == ApplicationStatus.SUCCESSFUL) {
 	                        application.setStatus(ApplicationStatus.BOOKED);
 	                    }
@@ -504,6 +516,70 @@ public class FileManager {
 	    
 	    return bookings;
 	}
+	
+	/**
+	 * Loads receipts from file
+	 * 
+	 * @param applicants List of loaded applicants for reference linking
+	 * @param projects List of loaded projects for reference linking
+	 * @return List of all receipts loaded from file
+	 */
+	public List<Receipt> loadReceipts(List<Applicant> applicants, List<Project> projects) {
+	    List<Receipt> receipts = new ArrayList<>();
+	    
+	    try (BufferedReader reader = new BufferedReader(new FileReader(RECEIPT_FILE))) {
+	        String line;
+	        // Skip header line
+	        reader.readLine();
+	        
+	        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+	        
+	        while ((line = reader.readLine()) != null) {
+	            if (line.trim().isEmpty()) continue;
+	            
+	            String[] parts = line.split("\\t");
+	            if (parts.length < 6) continue; // Ensure we have all required fields
+	            
+	            // Find matching applicant and project
+	            Applicant applicant = findApplicantByNRIC(parts[0], applicants);
+	            Project project = findProjectByName(parts[1], projects);
+	            
+	            if (applicant != null && project != null) {
+	                // Create receipt
+	                Receipt receipt = new Receipt(
+	                    parts[0],  // Applicant NRIC
+	                    parts[2],  // Officer NRIC
+	                    parts[1],  // Project Name
+	                    parts[3],  // Flat Type
+	                    Integer.parseInt(parts[4])  // Flat ID
+	                );
+	                
+	                // Parse receipt date
+	                try {
+	                    receipt.setReceiptDate(dateFormat.parse(parts[5]));
+	                } catch (ParseException e) {
+	                    // Use current date if parsing fails
+	                    receipt.setReceiptDate(new Date());
+	                }
+	                
+	                // Set content of the receipt if available
+	                if (parts.length > 6) {
+	                    receipt.setContent(parts[6]);
+	                }
+	                
+	                receipts.add(receipt);
+	            }
+	        }
+	        
+	        System.out.println("Successfully loaded " + receipts.size() + " receipts from file.");
+	    } catch (IOException e) {
+	        System.out.println("Warning: Failed to load receipts data. " + e.getMessage());
+	    }
+	    
+	    return receipts;
+	}
+
+	
  
  // Save methods
  public boolean saveApplicants(List<Applicant> applicants) {
@@ -677,21 +753,30 @@ public class FileManager {
 	    }
 	}
 
-	public boolean saveEnquiries(List<Enquiry> enquiries) {
+ public boolean saveEnquiries(List<Enquiry> enquiries) {
 	    try (BufferedWriter writer = new BufferedWriter(new FileWriter(ENQUIRY_FILE))) {
 	        // Write header
-	        writer.write("Applicant NRIC\tProject Name\tEnquiry Content\tResponse\tSubmission Date");
+	        writer.write("Applicant NRIC\tProject Name\tEnquiry Content\tEnquiry ID\tResponse\tResponder NRIC\tResponse Date\tSubmission Date");
 	        writer.newLine();
 	        
 	        // Write data
 	        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
 	        for (Enquiry enquiry : enquiries) {
-	            writer.write(String.format("%s\t%s\t%s\t%s\t%s",
+	            String projectName = enquiry.getProject() != null ? enquiry.getProject().getProjectName() : "N/A";
+	            String response = enquiry.getResponse() != null ? enquiry.getResponse() : "N/A";
+	            String responderNRIC = enquiry.getRespondedBy() != null ? enquiry.getRespondedBy().getNric() : "N/A";
+	            String responseDate = enquiry.getResponseDate() != null ? dateFormat.format(enquiry.getResponseDate()) : "N/A";
+	            String submissionDate = enquiry.getSubmissionDate() != null ? dateFormat.format(enquiry.getSubmissionDate()) : dateFormat.format(new Date());
+	            
+	            writer.write(String.format("%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s",
 	                enquiry.getApplicant().getNric(),
-	                enquiry.getProject().getProjectName(),
+	                projectName,
 	                enquiry.getEnquiryContent(),
-	                enquiry.getResponse() != null ? enquiry.getResponse() : "N/A",
-	                dateFormat.format(enquiry.getSubmissionDate())
+	                enquiry.getEnquiryId(),
+	                response,
+	                responderNRIC,
+	                responseDate,
+	                submissionDate
 	            ));
 	            writer.newLine();
 	        }
@@ -726,32 +811,8 @@ public class FileManager {
 	    }
 	}
 
-	public boolean saveReports(List<Report> reports) {
-	    try (BufferedWriter writer = new BufferedWriter(new FileWriter(REPORT_FILE))) {
-	        // Write header
-	        writer.write("Report Type\tFilter Criteria\tGeneration Date");
-	        writer.newLine();
-	        
-	        // Write data
-	        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
-	        for (Report report : reports) {
-	            writer.write(String.format("%s\t%s\t%s", 
-	                report.getReportType(),
-	                report.getFilters().toString(),
-	                dateFormat.format(new Date())  // Using current date
-	            ));
-	            writer.newLine();
-	        }
-	        
-	        return true;
-	    } catch (IOException e) {
-	        System.out.println("Error saving reports: " + e.getMessage());
-	        return false;
-	    }
-	}
+	// Removed saveReports method
 	
-	
-
 	/**
 	 * Saves flat bookings to file
 	 * 
@@ -784,6 +845,40 @@ public class FileManager {
 	        return true;
 	    } catch (IOException e) {
 	        System.out.println("Error: Failed to save bookings data. " + e.getMessage());
+	        return false;
+	    }
+	}
+	
+	/**
+	 * Saves receipts to file
+	 * 
+	 * @param receipts List of receipts to save
+	 * @return true if successful, false otherwise
+	 */
+	public boolean saveReceipts(List<Receipt> receipts) {
+	    try (BufferedWriter writer = new BufferedWriter(new FileWriter(RECEIPT_FILE))) {
+	        // Write header
+	        writer.write("Applicant NRIC\tProject Name\tOfficer NRIC\tFlat Type\tFlat ID\tReceipt Date\tReceipt Content");
+	        writer.newLine();
+	        
+	        // Write data
+	        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+	        for (Receipt receipt : receipts) {
+	            writer.write(String.format("%s\t%s\t%s\t%s\t%d\t%s\t%s",
+	                receipt.getApplicantNric(),
+	                receipt.getProjectName(),
+	                receipt.getOfficerNric(),
+	                receipt.getFlatType(),
+	                receipt.getFlatId(),
+	                dateFormat.format(receipt.getReceiptDate()),
+	                receipt.getContent() != null ? receipt.getContent() : "N/A"
+	            ));
+	            writer.newLine();
+	        }
+	        
+	        return true;
+	    } catch (IOException e) {
+	        System.out.println("Error: Failed to save receipts data. " + e.getMessage());
 	        return false;
 	    }
 	}

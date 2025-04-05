@@ -2,6 +2,7 @@ package bto.Entities;
 
 import bto.EntitiesProjectRelated.*;
 import bto.Enums.*;
+import bto.Controllers.*;
 import java.util.Date;
 import java.util.List;
 import java.util.ArrayList;
@@ -112,10 +113,6 @@ public class Applicant extends User {
 	     return eligibleProjects;
 	 }
 
-	 public boolean submitEnquiry(String enquiryContent) {
-	     // Implementation for submitting an enquiry
-	     return false; // Placeholder
-	 }
 	 
 	 public ApplicationStatus viewApplicationStatus() {
 	     if (appliedProject != null) {
@@ -126,24 +123,107 @@ public class Applicant extends User {
 	 
 	 public boolean requestWithdrawal() {
 	     // Implementation for withdrawal request
+		 if (appliedProject != null){
+			return true;
+		 }
 	     return false; // Placeholder
 	 }
 	 
-	 public String viewEnquiry() {
-	     // Implementation to view enquiries
-	     return ""; // Placeholder
-	 }
-	 
-	 public boolean editEnquiry() {
-	     // Implementation to edit enquiry
-	     return false; // Placeholder
-	 }
-	 
-	 public boolean deleteEnquiry() {
-	     // Implementation to delete enquiry
-	     return false; // Placeholder
-	 }
-	 
+	 public boolean submitEnquiry(String enquiryContent, Project project) {
+	if (enquiryContent == null || enquiryContent.trim().isEmpty()) {
+	    System.out.println("Error: Enquiry content cannot be empty.");
+	        return false;
+	    }
+	    
+	    EnquiryController enquiryController = new EnquiryController();
+	    Enquiry newEnquiry = enquiryController.createEnquiry(this, project, enquiryContent);
+	    return (newEnquiry != null);
+	}
+	
+	/**
+	 * View all enquiries submitted by this applicant.
+	 * 
+	 * @return A string representation of all enquiries submitted by this applicant
+	 */
+	public String viewEnquiry() {
+	    EnquiryController enquiryController = new EnquiryController();
+	    List<Enquiry> myEnquiries = enquiryController.getEnquiriesByApplicant(this);
+	    
+	    if (myEnquiries.isEmpty()) {
+	        return "You have not submitted any enquiries.";
+	}
+	
+	StringBuilder result = new StringBuilder("Your Enquiries:\n");
+	for (Enquiry enquiry : myEnquiries) {
+	    String projectName = enquiry.getProject() != null ? enquiry.getProject().getProjectName() : "General";
+	    String status = enquiry.isResponded() ? "Responded" : "Pending";
+	    
+	    result.append("Project: ").append(projectName)
+	          .append(", Status: ").append(status)
+	          .append(", Content: ").append(enquiry.getEnquiryContent())
+	          .append("\n");
+	    
+	    if (enquiry.getResponse() != null) {
+	        result.append("Response: ").append(enquiry.getResponse()).append("\n");
+	    }
+	    
+	    result.append("-----------------------\n");
+	    }
+	    
+	    return result.toString();
+	}
+	
+	/**
+	 * Edit an existing enquiry.
+	 * 
+	 * @param enquiry The enquiry to edit
+	 * @param newContent The new content for the enquiry
+	 * @return true if the enquiry was edited successfully, false otherwise
+	 */
+	public boolean editEnquiry(Enquiry enquiry, String newContent) {
+	    if (enquiry == null || newContent == null || newContent.trim().isEmpty()) {
+	        System.out.println("Error: Invalid enquiry or content.");
+	    return false;
+		}
+		
+		// Check if the enquiry belongs to this applicant
+		if (!this.getNric().equals(enquiry.getApplicant().getNric())) {
+		    System.out.println("Error: You can only edit your own enquiries.");
+		    return false;
+		}
+		
+		// Check if the enquiry has already been responded to
+		if (enquiry.isResponded()) {
+		    System.out.println("Error: You cannot edit an enquiry that has already been responded to.");
+		        return false;
+		    }
+		    
+		    EnquiryController enquiryController = new EnquiryController();
+		    return enquiryController.editEnquiry(enquiry, newContent);
+		}
+	
+	/**
+	 * Delete an existing enquiry.
+	 * 
+	 * @param enquiry The enquiry to delete
+	 * @return true if the enquiry was deleted successfully, false otherwise
+	 */
+	public boolean deleteEnquiry(Enquiry enquiry) {
+	    if (enquiry == null) {
+	        System.out.println("Error: Invalid enquiry.");
+	    return false;
+	    }
+	
+		// Check if the enquiry belongs to this applicant
+		if (!this.getNric().equals(enquiry.getApplicant().getNric())) {
+		    System.out.println("Error: You can only delete your own enquiries.");
+		        return false;
+		    }
+		    
+		    EnquiryController enquiryController = new EnquiryController();
+		    return enquiryController.deleteEnquiry(enquiry);
+		}
+
 	 // Getters and Setters
 	 public ProjectApplication getAppliedProject() {
 	     return appliedProject;
@@ -160,4 +240,7 @@ public class Applicant extends User {
 	 public void setBookedFlat(FlatBooking bookedFlat) {
 	     this.bookedFlat = bookedFlat;
 	 }
+	 
+
+	
 }

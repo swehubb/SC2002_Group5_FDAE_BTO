@@ -11,7 +11,7 @@ public class ReceiptGenerator {
     public ReceiptGenerator() {
     }
 
-    // Methods
+ // Methods
     public String generateReceipt(FlatBooking booking) {
         if (booking == null) {
             return null;
@@ -19,7 +19,7 @@ public class ReceiptGenerator {
 
         return formatReceipt(booking);
     }
-    
+
     // Method that accepts a ProjectApplication
     public boolean generateReceipt(ProjectApplication application) {
         if (application == null || application.getApplicant() == null || 
@@ -38,7 +38,7 @@ public class ReceiptGenerator {
         String receiptContent = formatReceipt(tempBooking);
         return receiptContent != null && !receiptContent.isEmpty();
     }
-    
+
     // Enhanced format receipt method that uses FlatBooking
     private String formatReceipt(FlatBooking booking) {
         User user = booking.getApplicant();
@@ -54,8 +54,7 @@ public class ReceiptGenerator {
         String currentDate = dateFormat.format(new Date());
         String bookingDateStr = dateFormat.format(bookingDate);
 
-        receipt.append("BOOKING RECEIPT\n");
-        receipt.append("==============\n\n");
+        receipt.append("======== BOOKING RECEIPT ========\n");
         receipt.append("Receipt Date: ").append(currentDate).append("\n");
         receipt.append("Booking Date: ").append(bookingDateStr).append("\n\n");
 
@@ -71,6 +70,13 @@ public class ReceiptGenerator {
         receipt.append("Project Name: ").append(project.getProjectName()).append("\n");
         receipt.append("Neighborhood: ").append(project.getNeighborhood()).append("\n");
         receipt.append("Flat Type: ").append(flatType).append("\n");
+        
+        // Processing Officer Details
+        HDBOfficer officer = booking.getProcessedByOfficer();
+        if (officer != null) {
+            receipt.append("Processed By: ").append(officer.getName()).append("\n");
+            receipt.append("Officer ID: ").append(officer.getNric()).append("\n\n");
+        }
         
         if (flatId > 0) {
             receipt.append("Flat ID: ").append(flatId).append("\n\n");
@@ -91,7 +97,7 @@ public class ReceiptGenerator {
 
         return receipt.toString();
     }
-    
+
     // Original method maintained for backward compatibility
     public String formatReceipt(User user, Project project, FlatType flatType) {
         StringBuilder receipt = new StringBuilder();

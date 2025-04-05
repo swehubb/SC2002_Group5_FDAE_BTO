@@ -272,44 +272,23 @@ public class HDBManager extends User {
     }
     
     public Report generateReport(FilterCriteria criteria) {
-        // Create a new report
-        Report report = new Report();
-        
-        // Set report title based on criteria
-        StringBuilder title = new StringBuilder("Applicant Report");
-        
-        // Process filter criteria
-        for (Map.Entry<String, Object> entry : criteria.getCriteria().entrySet()) {
-            String key = entry.getKey();
-            Object value = entry.getValue();
-            
-            switch (key) {
-                case "maritalStatus":
-                    title.append(" - ").append(value).append(" Applicants");
-                    break;
-                case "flatType":
-                    title.append(" - ").append(value).append(" Flats");
-                    break;
-                case "project":
-                    title.append(" - Project: ").append(((Project) value).getProjectName());
-                    break;
-                case "minAge":
-                    title.append(" - Min Age: ").append(value);
-                    break;
-                case "maxAge":
-                    title.append(" - Max Age: ").append(value);
-                    break;
+        Report report = new Report("BTO Flat Booking Report", criteria);        
+        // Collect all bookings from managed projects
+        for (Project project : this.managedProjects) {
+            // Get applications with BOOKED status
+            for (ProjectApplication application : project.getApplications()) {
+                if (application.getStatus() == ApplicationStatus.BOOKED) {
+                    // Create a booking from the application data
+                    FlatBooking booking = new FlatBooking(
+                        application.getApplicant(),
+                        project,
+                        application.getSelectedFlatType(),
+                        0  // Default value for flat ID
+                    );
+                    report.addBooking(booking);
+                }
             }
         }
-        
-        report.setTitle(title.toString());
-        
-        // Generate report content based on criteria
-        // This is a simplified implementation; in reality, we would query the applications
-        // and generate detailed report content
-        report.setContent("Report generated on " + new Date() + "\n\n" + 
-                          "Filter Criteria: " + criteria.toString() + "\n\n" + 
-                          "Report Details: ...");
         
         return report;
     }

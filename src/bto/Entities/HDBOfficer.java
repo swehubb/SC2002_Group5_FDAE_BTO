@@ -132,10 +132,6 @@ public class HDBOfficer extends User {
 	     return applicantRole.applyForProject(project);
 	 }
 	 
-	 public boolean submitEnquiry(String enquiryContent) {
-	     // Delegate to the applicant role
-	     return applicantRole.submitEnquiry(enquiryContent);
-	 }
 	 
 	 public ApplicationStatus viewApplicationStatus() {
 	     // Delegate to the applicant role
@@ -146,22 +142,7 @@ public class HDBOfficer extends User {
 	     // Delegate to the applicant role
 	     return applicantRole.requestWithdrawal();
 	 }
-	 
-	 public String viewEnquiry() {
-	     // Delegate to the applicant role
-	     return applicantRole.viewEnquiry();
-	 }
-	 
-	 public boolean editEnquiry() {
-	     // Delegate to the applicant role
-	     return applicantRole.editEnquiry();
-	 }
-	 
-	 public boolean deleteEnquiry() {
-	     // Delegate to the applicant role
-	     return applicantRole.deleteEnquiry();
-	 }
-	 
+
 	 // Getters and Setters
 	 public List<Project> getAssignedProjects() {
 	     return assignedProjects;

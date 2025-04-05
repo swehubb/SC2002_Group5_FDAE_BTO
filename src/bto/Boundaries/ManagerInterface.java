@@ -781,7 +781,7 @@ public class ManagerInterface {
                               " - Status: " + application.getStatus());
         }
         
-        // Get user selection
+        // Get user selection with proper validation
         int selection = getIntegerInput("Select a withdrawal to process (0 to cancel): ", 0, pendingWithdrawals.size());
         
         if (selection == 0) {
@@ -790,6 +790,16 @@ public class ManagerInterface {
         }
         
         ProjectApplication selectedWithdrawal = pendingWithdrawals.get(selection - 1);
+        Applicant applicant = selectedWithdrawal.getApplicant();
+        
+        // Get the Withdrawal object from WithdrawalController
+        Withdrawal withdrawal = withdrawalController.getWithdrawalByApplicant(applicant);
+        
+        if (withdrawal == null) {
+            showMessage("No withdrawal record found. Creating one now...");
+            withdrawal = new Withdrawal(applicant, selectedWithdrawal);
+            withdrawalController.addWithdrawal(withdrawal);
+        }
         
         // Approve or reject
         System.out.println("1. Approve");
@@ -797,13 +807,13 @@ public class ManagerInterface {
         int actionChoice = getIntegerInput("Enter your choice: ", 1, 2);
         
         if (actionChoice == 1) {
-            if (manager.approveWithdrawal(selectedWithdrawal)) {
+            if (withdrawalController.approveWithdrawal(withdrawal)) {
                 showMessage("Withdrawal approved successfully!");
             } else {
                 showMessage("Failed to approve withdrawal.");
             }
         } else if (actionChoice == 2) {
-            if (manager.rejectWithdrawal(selectedWithdrawal)) {
+            if (withdrawalController.rejectWithdrawal(withdrawal)) {
                 showMessage("Withdrawal rejected successfully!");
             } else {
                 showMessage("Failed to reject withdrawal.");
@@ -831,12 +841,15 @@ public class ManagerInterface {
         switch (filterChoice) {
             case 1:
                 // All applicants, no specific filter
+                showMessage("Generating report for all applicants.");
                 break;
             case 2:
-                criteria.addCriteria("maritalStatus", MaritalStatus.MARRIED);
+                criteria.addCriterion("maritalStatus", MaritalStatus.MARRIED);
+                showMessage("Generating report for married applicants.");
                 break;
             case 3:
-                criteria.addCriteria("maritalStatus", MaritalStatus.SINGLE);
+                criteria.addCriterion("maritalStatus", MaritalStatus.SINGLE);
+                showMessage("Generating report for single applicants.");
                 break;
             case 4:
                 System.out.println("Select Flat Type:");
@@ -845,9 +858,11 @@ public class ManagerInterface {
                 int flatTypeChoice = getIntegerInput("Enter your choice: ", 1, 2);
                 
                 if (flatTypeChoice == 1) {
-                    criteria.addCriteria("flatType", FlatType.TWO_ROOM);
-                } else if (flatTypeChoice == 2) {
-                    criteria.addCriteria("flatType", FlatType.THREE_ROOM);
+                    criteria.addCriterion("flatType", FlatType.TWO_ROOM);
+                    showMessage("Generating report for 2-Room flat applications.");
+                } else {
+                    criteria.addCriterion("flatType", FlatType.THREE_ROOM);
+                    showMessage("Generating report for 3-Room flat applications.");
                 }
                 break;
             case 5:
@@ -868,7 +883,9 @@ public class ManagerInterface {
                     int projectChoice = getIntegerInput("Select a project (0 for all): ", 0, managerProjects.size());
                     
                     if (projectChoice > 0) {
-                        criteria.addCriteria("project", managerProjects.get(projectChoice - 1));
+                        Project selectedProject = managerProjects.get(projectChoice - 1);
+                        criteria.addCriterion("project", selectedProject);
+                        showMessage("Generating report for project: " + selectedProject.getProjectName());
                     } else {
                         showMessage("Generating report for all projects.");
                     }
@@ -878,18 +895,20 @@ public class ManagerInterface {
                 int minAge = getIntegerInput("Enter minimum age: ", 0);
                 int maxAge = getIntegerInput("Enter maximum age: ", minAge);
                 
-                criteria.addCriteria("minAge", minAge);
-                criteria.addCriteria("maxAge", maxAge);
+                criteria.addCriterion("minAge", minAge);
+                criteria.addCriterion("maxAge", maxAge);
+                showMessage("Generating report for applicants aged " + minAge + " to " + maxAge);
                 break;
         }
         
-        // Generate the report
-        Report report = manager.generateReport(criteria);
+        // Generate the report (no need to store it permanently)
+        Report report = reportController.generateReport("BTO Flat Booking Report", criteria, manager.getManagedProjects());
         
         if (report != null) {
             // Display the report
             showMessage("\n=== REPORT ===");
-            showMessage(report.toString());
+            String formattedReport = reportController.getFormattedReport(report);
+            showMessage(formattedReport);
             
             // Save the report
             String saveOption = getInput("Do you want to save this report? (Y/N): ");
@@ -897,8 +916,11 @@ public class ManagerInterface {
             if (saveOption.equalsIgnoreCase("Y")) {
                 String fileName = getInput("Enter file name (without extension): ");
                 
-                // Dummy implementation of saving the report
-                showMessage("Report saved as " + fileName + ".pdf");
+                if (reportController.exportReport(report, fileName + ".pdf")) {
+                    showMessage("Report saved as " + fileName + ".pdf");
+                } else {
+                    showMessage("Failed to save report.");
+                }
             }
         } else {
             showMessage("Failed to generate report.");
@@ -922,10 +944,9 @@ public class ManagerInterface {
     
     private void displayEnquiryDetails(Enquiry enquiry) {
         System.out.println("\nEnquiry ID: " + enquiry.getEnquiryId());
-        System.out.println("From: " + enquiry.getSender().getName());
-        System.out.println("Project: " + (enquiry.getProject() != null ? enquiry.getProject().getProjectName() : "N/A"));
-        System.out.println("Subject: " + enquiry.getSubject());
-        System.out.println("Message: " + enquiry.getMessage());
+        System.out.println("From: " + enquiry.getApplicant().getName());
+        System.out.println("Project: " + (enquiry.getProject() != null ? enquiry.getProject().getProjectName() : "General"));
+        System.out.println("Message: " + enquiry.getEnquiryContent());
         System.out.println("Status: " + (enquiry.isResponded() ? "Responded" : "Pending"));
         
         if (enquiry.isResponded()) {
@@ -939,58 +960,64 @@ public class ManagerInterface {
     
     private void respondToEnquiry(HDBManager manager) {
         showMessage("\n=== RESPOND TO ENQUIRY ===");
-        
+    
         // Get pending enquiries for manager's projects
         List<Enquiry> pendingEnquiries = new ArrayList<>();
         List<Project> projects = projectController.getAllProjects();
         List<Project> managerProjects = manager.ownProjects(projects, manager);
-        
+    
+        // Filter pending enquiries
         for (Enquiry enquiry : enquiryController.getAllEnquiries()) {
-            if (!enquiry.isResponded() && 
+            if (!enquiry.isResponded() &&
                 (enquiry.getProject() == null || managerProjects.contains(enquiry.getProject()))) {
                 pendingEnquiries.add(enquiry);
             }
         }
-        
+    
+        // Check if there are any pending enquiries
         if (pendingEnquiries.isEmpty()) {
             showMessage("No pending enquiries for your projects.");
             return;
         }
-        
+    
         // Display pending enquiries
         showMessage("Pending Enquiries:");
         for (int i = 0; i < pendingEnquiries.size(); i++) {
             Enquiry enquiry = pendingEnquiries.get(i);
-            System.out.println((i+1) + ". From: " + enquiry.getSender().getName() + 
-                              " - Subject: " + enquiry.getSubject() + 
-                              " - Project: " + (enquiry.getProject() != null ? enquiry.getProject().getProjectName() : "N/A"));
+            System.out.println((i+1) + ". From: " + enquiry.getSender().getName() +
+                                " - Subject: " + enquiry.getSubject() +
+                                " - Project: " + (enquiry.getProject() != null ? enquiry.getProject().getProjectName() : "N/A"));
         }
-        
+    
         // Get user selection
         int selection = getIntegerInput("Select an enquiry to respond to (0 to cancel): ", 0, pendingEnquiries.size());
-        
-        if (selection == 0) {
+    
+        // Validate selection
+        if (selection == 0 || selection > pendingEnquiries.size()) {
             showMessage("Operation cancelled.");
             return;
         }
-        
+    
+        // Get selected enquiry
         Enquiry selectedEnquiry = pendingEnquiries.get(selection - 1);
-        
+    
         // Display enquiry details
         showMessage("\nEnquiry Details:");
         displayEnquiryDetails(selectedEnquiry);
-        
+    
         // Get response
         String response = getInput("Enter your response: ");
-        
+    
+        // Validate and process response
         if (!response.trim().isEmpty()) {
-            if (manager.respondToEnquiry(selectedEnquiry)) {
-                // Set response details
+            // Attempt to respond to the enquiry
+            if (enquiryController.respondToEnquiry(selectedEnquiry, response, manager)) {
+                // Update enquiry details
                 selectedEnquiry.setResponse(response);
                 selectedEnquiry.setRespondedBy(manager);
                 selectedEnquiry.setResponseDate(new Date());
                 selectedEnquiry.setResponded(true);
-                
+    
                 showMessage("Response sent successfully!");
             } else {
                 showMessage("Failed to send response.");
@@ -1082,6 +1109,8 @@ public class ManagerInterface {
             }
         }
     }
+    
+    
     
     public void showMessage(String message) {
         System.out.println(message);

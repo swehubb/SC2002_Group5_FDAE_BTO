@@ -10,12 +10,16 @@ import bto.Entities.*;
 
 public class BookingController {
     private Map<String, FlatBooking> bookings; // Simulate a database of bookings
-    private ReceiptGenerator receiptGenerator;
+    private Map<String, String> rejectedBookings; // Track rejected bookings and reasons
+    private ReceiptGenerator receiptGenerator; // Generates receipt
+    private Map<String, Receipt> receipts; // Map that stores database of receipts with Applicant's NRIC as keys
 
     // Constructor
     public BookingController() {
         bookings = new HashMap<>();
+        rejectedBookings = new HashMap<>();
         receiptGenerator = new ReceiptGenerator();
+        receipts = new HashMap<>();
     }
 
     // Method used in officer interface
@@ -104,6 +108,7 @@ public class BookingController {
         // Create a new booking with the specific flat ID
         FlatBooking booking = new FlatBooking(applicant, project, flatType, flatId);
         booking.setBookingStatus(FlatBooking.STATUS_APPROVED); // Approve immediately
+        booking.setProcessedByOfficer(officer);
 
         // Set the booking for the applicant
         applicant.setBookedFlat(booking);
@@ -124,6 +129,9 @@ public class BookingController {
         }
 
         String nric = application.getApplicant().getNric();
+        
+        // Store rejection reason
+        rejectedBookings.put(nric, rejectionReason);
         
         // Check if there's an existing booking
         FlatBooking existingBooking = bookings.get(nric);
@@ -163,7 +171,7 @@ public class BookingController {
         return booking != null && booking.isApproved();
     }
 
-    // Method to get booking status for an application
+    // Method to get booking status
     public String getBookingStatus(ProjectApplication application) {
         if (application == null || application.getApplicant() == null) {
             return null;
@@ -229,6 +237,45 @@ public class BookingController {
         return rejectedBookings;
     }
 
+    // Method to generate and store receipt
+    public Receipt generateAndStoreReceipt(FlatBooking booking) {
+        if (booking == null || booking.getApplicant() == null || booking.getProcessedByOfficer() == null) {
+            return null;
+        }
+        
+        String applicantNric = booking.getApplicant().getNric();
+        
+        // Check if a receipt already exists for this applicant
+        if (receipts.containsKey(applicantNric)) {
+            // Return the existing receipt instead of creating a new one
+            return receipts.get(applicantNric);
+        }
+        
+        // Create a new receipt
+        String officerNric = booking.getProcessedByOfficer().getNric();
+        String projectName = booking.getProject().getProjectName();
+        String flatType = booking.getFlatType().toString();
+        int flatId = booking.getFlatId();
+        
+        Receipt receipt = new Receipt(applicantNric, officerNric, projectName, flatType, flatId);
+        String formattedReceipt = receiptGenerator.generateReceipt(booking);
+        receipt.setContent(formattedReceipt);
+        
+        receipts.put(applicantNric, receipt);
+        
+        return receipt;
+    }
+    
+    // Method to check if a receipt exists for an applicant
+    public boolean hasReceipt(String nric) {
+        return receipts.containsKey(nric);
+    }
+    
+    // Method to get receipt for an applicant
+    public Receipt getReceiptForApplicant(String nric) {
+        return receipts.get(nric);
+    }
+
     // Original method
     public boolean updateFlatAvailability(Project project, FlatType flatType) {
         int availableUnits = project.getFlatTypeUnits().getOrDefault(flatType, 0);
@@ -240,12 +287,6 @@ public class BookingController {
 
         return false;
     }
-
-    // Original method
-    public String generateReceipt(FlatBooking booking) {
-        return receiptGenerator.generateReceipt(booking);
-    }
-    
     // Method to generate receipt directly from booking controller
     public boolean generateReceipt(ProjectApplication application) {
         if (application == null || application.getApplicant() == null) {
@@ -262,5 +303,24 @@ public class BookingController {
         // Generate receipt
         String receipt = receiptGenerator.generateReceipt(booking);
         return receipt != null && !receipt.isEmpty();
+    }
+    
+    public void setBookings(List<FlatBooking> bookingsList) {
+        this.bookings.clear();
+        for (FlatBooking booking : bookingsList) {
+            this.bookings.put(booking.getApplicant().getNric(), booking);
+        }
+    }
+
+    public void setReceipts(List<Receipt> receiptsList) {
+        this.receipts.clear();
+        for (Receipt receipt : receiptsList) {
+            this.receipts.put(receipt.getApplicantNric(), receipt);
+        }
+    }
+    
+ // In the BookingController class
+    public List<Receipt> getAllReceipts() {
+        return new ArrayList<>(receipts.values());
     }
 }

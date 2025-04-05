@@ -4,6 +4,8 @@ import bto.Entities.*;
 import bto.EntitiesProjectRelated.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 public class WithdrawalController {
     private Map<String, Withdrawal> withdrawals; // Simulate a database of withdrawals
@@ -74,6 +76,20 @@ public class WithdrawalController {
         return true;
     }
     
+ // Add to WithdrawalController class
+    public Withdrawal getWithdrawalByApplicant(Applicant applicant) {
+        if (applicant == null) {
+            return null;
+        }
+        return withdrawals.get(applicant.getNric());
+    }
+
+    public void addWithdrawal(Withdrawal withdrawal) {
+        if (withdrawal != null && withdrawal.getApplicant() != null) {
+            withdrawals.put(withdrawal.getApplicant().getNric(), withdrawal);
+        }
+    }
+    
     public void notifyApplicantStatus(Withdrawal withdrawal) {
         // Implementation to notify the applicant about the withdrawal status
         // This could be via email, SMS, or other means
@@ -81,5 +97,25 @@ public class WithdrawalController {
         // Placeholder
         System.out.println("Notification sent to " + withdrawal.getApplicant().getNric() + 
                            " regarding withdrawal status: " + withdrawal.getStatus());
+    }
+    
+ // Add to WithdrawalController class
+    /**
+     * Gets all withdrawals in the system
+     * @return List of all withdrawals
+     */
+    public List<Withdrawal> getAllWithdrawals() {
+        return new ArrayList<>(withdrawals.values());
+    }
+
+    /**
+     * Sets the withdrawals in the controller (used when loading from file)
+     * @param withdrawalsList List of withdrawals to set
+     */
+    public void setWithdrawals(List<Withdrawal> withdrawalsList) {
+        this.withdrawals.clear();
+        for (Withdrawal withdrawal : withdrawalsList) {
+            this.withdrawals.put(withdrawal.getApplicant().getNric(), withdrawal);
+        }
     }
 }

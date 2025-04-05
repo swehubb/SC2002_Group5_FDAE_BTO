@@ -1,54 +1,25 @@
 package bto.EntitiesProjectRelated;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class Report {
     private String reportType;
     private List<FlatBooking> bookings;
     private FilterCriteria filters;
+    private Date generationDate;
     
     // Constructors
     public Report() {
         this.bookings = new ArrayList<>();
+        this.generationDate = new Date();
     }
     
     public Report(String reportType, FilterCriteria filters) {
         this();
         this.reportType = reportType;
         this.filters = filters;
-    }
-    
-    // Methods
-    public String getFormattedReport() {
-        StringBuilder report = new StringBuilder();
-        report.append("Report Type: ").append(reportType).append("\n");
-        report.append("Generated On: ").append(new Date()).append("\n\n");
-        
-        if (bookings.isEmpty()) {
-            report.append("No bookings found matching the criteria.");
-        } else {
-            report.append("Booking Information:\n");
-            report.append("===================\n");
-            
-            for (FlatBooking booking : bookings) {
-                report.append(booking.getBookingDetails()).append("\n");
-            }
-            
-            report.append("Total Bookings: ").append(bookings.size());
-        }
-        
-        return report.toString();
-    }
-    
-    public boolean applyFilters(FilterCriteria newFilters) {
-        this.filters = newFilters;
-        return true;
-    }
-    
-    public boolean exportToFile(String filename) {
-        // Implementation to export report to file
-        return false; // Placeholder
     }
     
     // Getters and Setters
@@ -76,10 +47,23 @@ public class Report {
         this.filters = filters;
     }
     
-    // Helper methods
+    public Date getGenerationDate() {
+        return generationDate;
+    }
+    
+    public void setGenerationDate(Date generationDate) {
+        this.generationDate = generationDate;
+    }
+    
+    // Helper method to add bookings
     public void addBooking(FlatBooking booking) {
         if (!bookings.contains(booking)) {
             bookings.add(booking);
         }
+    }
+    
+    @Override
+    public String toString() {
+        return "Report [type=" + reportType + ", filters=" + filters + ", bookings=" + bookings.size() + "]";
     }
 }

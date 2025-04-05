@@ -12,6 +12,7 @@ public class FlatBooking {
     private Date bookingDate;
     private String bookingStatus; // Added booking status field
     private String rejectionReason; // Added to store reason if rejected
+    private HDBOfficer processedByOfficer;
     
     // Constants for booking status
     public static final String STATUS_APPROVED = "APPROVED";
@@ -150,5 +151,13 @@ public class FlatBooking {
     
     public void setRejectionReason(String rejectionReason) {
         this.rejectionReason = rejectionReason;
+    }
+    
+    public HDBOfficer getProcessedByOfficer() {
+        return processedByOfficer;
+    }
+
+    public void setProcessedByOfficer(HDBOfficer officer) {
+        this.processedByOfficer = officer;
     }
 }
