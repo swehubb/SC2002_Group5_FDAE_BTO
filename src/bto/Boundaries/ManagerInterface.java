@@ -116,7 +116,8 @@ public class ManagerInterface {
                         break;
                     case 0:
                         showMessage("Logging out...");
-                        return;
+                        userInterface.displayLoginMenu();
+                        break;
                     default:
                         showMessage("Invalid choice. Please try again.");
                 }
@@ -754,7 +755,7 @@ public class ManagerInterface {
         
         if (pendingWithdrawals.isEmpty()) {
             showMessage("No pending withdrawals for your projects.");
-            return;
+            displayManagerMenu(manager);
         }
         
         // Display pending withdrawals
