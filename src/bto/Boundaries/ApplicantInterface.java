@@ -119,7 +119,7 @@ public class ApplicantInterface {
                         break;
                     // In the switch statement, add a case for generating receipt
                     case 10:
-                        generateReceiptInterface();
+                        viewReceiptInterface());
                         break;
                     case 0:
                         userInterface.displayLoginMenu();
@@ -519,7 +519,7 @@ public class ApplicantInterface {
         displayApplicantMenu(currentApplicant);
     }
     
-private void generateReceiptInterface() {
+private void viewReceiptInterface()) { //Visible option in the main applicant menu
     System.out.println("\n=== GENERATE RECEIPT ===");
     
     ProjectApplication application = applicationController.getApplicationByApplicantNRIC(currentApplicant.getNric());
@@ -548,7 +548,7 @@ private void generateReceiptInterface() {
     displayApplicantMenu(currentApplicant);
 }
     
-private void viewBookingReceipt(Applicant applicant) {
+private void viewBookingReceipt(Applicant applicant) { //Called in Application Status Window: If flat is booked Book Receipt will be displayed
     System.out.println("\n======== BOOKING RECEIPT ========");
     
     // Pass the BookingController when getting the receipt
