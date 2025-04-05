@@ -11,8 +11,8 @@ import bto.Entities.*;
 public class BookingController {
     private Map<String, FlatBooking> bookings; // Simulate a database of bookings
     private Map<String, String> rejectedBookings; // Track rejected bookings and reasons
-    private ReceiptGenerator receiptGenerator;
-    private Map<String, Receipt> receipts;
+    private ReceiptGenerator receiptGenerator; // Generates receipt
+    private Map<String, Receipt> receipts; // Map that stores database of receipts with Applicant's NRIC as keys
 
     // Constructor
     public BookingController() {
